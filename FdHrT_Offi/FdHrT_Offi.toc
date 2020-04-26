@@ -1,0 +1,19 @@
+## Interface: 11304
+## Version: v0.0.1
+## Dependencies: FdHrT
+## OptionalDeps: Ace3
+## X-Embeds: Ace3
+
+
+## Title: FdH Raid Tool |cFF0099FF[Offi Tools]|r
+## Notes: Auto invite, Auto raid track, and a lot more
+
+## Notes-deDE: Auto invite, Auto Raid track, und noch vieles mehr
+
+## Author: Nemolus
+
+
+
+libs.xml
+
+Main.lua
