@@ -1,0 +1,19 @@
+## Interface: 11304
+## Version: v0.0.1
+## Dependencies: FdHrT
+## OptionalDeps: Ace3
+## X-Embeds: Ace3
+
+
+## Title: FdH Raid Tool |cFF0099FF[AutoRoll]|r
+## Notes: Define rules to Automatic use Need, Gier, Pass on a item
+
+## Notes-deDE: Definiere regeln um automatisch auf Items zu würfeln oder passen.
+
+## Author: Nemolus
+
+
+
+libs.xml
+
+Main.lua
