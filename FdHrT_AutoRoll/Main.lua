@@ -45,7 +45,7 @@ local dbDefaults = {
 				{ -- 
 					description = "Auf restliche Grüne und Blaue Items passen",
 					enabled = false,
-					items = {['*']=true}, 
+					items = {["all"]=true}, 
 					rollOptionSuccsess = 0,
 					rollOptionFail = nil,
 					conditions = {
@@ -165,15 +165,75 @@ function AutoRoll:AddGeneratedOptions()
 
 	for i,dbItemGroup in ipairs(self.db.itemGroups) do
 
-		options.args.ar.args[tostring(i)] = {
-      				name = dbItemGroup.description,
-      				desc = "Zeige addon status informationen",
-      				type = "execute",
-      				func = "PrintStatus"
-    			}
-	end
+		options.args.ar.args["itemGroup"..i] = {
+			name = "itemGroup"..i,
+			type = "group",
+			inline = true,
+			width = "full",
+			args = {
+				enabled = {
+					name = "Aktivieren/Deaktivieren",
+					type = "toggle",
+					get = "IsItemGroupEnabled",
+					set = "ToggleItemGroupEnabled",
+					arg = i,
+				},
+				description = {
+					name = "Beschreibung",
+					type = "input",
+					get = "getItemGroupDescription",
+					set = "setItemGroupDescription",
+					arg = i,
+					width = "full",
+				},
+				items = {
+					name = "Items",
+					desc = ", separierte liste mit Item Id's oder 'all' für alle Items",
+					type = "input",
+					get = "getItemGroupItems",
+					set = "setItemGroupItems",
+					arg = i,
+					width = "full",
+				},
+			}
+		}
 
+	end
 end
+
+
+
+
+function AutoRoll:getItemGroupDescription(info)
+	return self.db.itemGroups[info.arg].description
+end
+
+function AutoRoll:setItemGroupDescription(info, value)
+	self.db.itemGroups[info.arg].description = value
+end
+
+function AutoRoll:getItemGroupItems(info)
+	local tmpItemList = {}
+	for itemId, value in pairs(self.db.itemGroups[info.arg].items) do
+		tmpItemList[#tmpItemList+1] = itemId
+	end
+	return strjoin(",", tostringall(unpack(tmpItemList)))
+end
+
+function AutoRoll:setItemGroupItems(info, value)
+	self.db.itemGroups[info.arg].items = value
+end
+
+function AutoRoll:IsItemGroupEnabled(info)
+	return self.db.itemGroups[info.arg].enabled
+end
+
+function AutoRoll:ToggleItemGroupEnabled(info, value)
+	self.db.itemGroups[info.arg].enabled = value
+end
+
+
+
 
 
 function AutoRoll:ZONE_CHANGED()
