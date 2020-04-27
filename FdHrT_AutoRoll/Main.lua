@@ -101,7 +101,8 @@ local options = {
       				values = rollOptions,
       				get = "GetCrapRollStat",
       				set = "SetCrapRollStat",
-      				style = "dropdown"
+      				style = "dropdown",
+      				arg = "mein test",
     			},
       		}
     	}
@@ -109,6 +110,7 @@ local options = {
 }
 
 function AutoRoll:GetCrapRollStat(info)
+	self:Print(info.arg)
 	return Crap_Roll_Stat
 end
 
@@ -143,6 +145,7 @@ function AutoRoll:OnInitialize()
     -- Called when the addon is loaded
 end
 
+
 function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
@@ -151,10 +154,27 @@ function AutoRoll:OnEnable()
     self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
     self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
+    self:AddGeneratedOptions();
     FdHrT:AddAddonOptions(options);
 
     init()
 end
+
+
+function AutoRoll:AddGeneratedOptions()
+
+	for i,dbItemGroup in ipairs(self.db.itemGroups) do
+
+		options.args.ar.args[tostring(i)] = {
+      				name = dbItemGroup.description,
+      				desc = "Zeige addon status informationen",
+      				type = "execute",
+      				func = "PrintStatus"
+    			}
+	end
+
+end
+
 
 function AutoRoll:ZONE_CHANGED()
     self:Print(self.message)
