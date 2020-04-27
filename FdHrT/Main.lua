@@ -12,18 +12,20 @@ local FdHOptions = {
     },
 }
 
-local dbDefaults = {
-	profile = {asdf = "test2",asdf1 = "test1",asdf2 = "test 2"}
+local FdHDbDefaults = {
+	profile = {
+		['**'] = {
+			enabled = false
+		}
+	}
 }
+
 function FdHrT:OnInitialize()
-	self.db = LibStub("AceDB-3.0"):New("FdHrTDB", dbDefaults, true)
-	FdHOptions.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 	self:RegisterChatCommand("rl", function() ReloadUI() end)
-	FdHrT:AddOptions();
+	FdHrT:AddAddonDBDefaults();
+    FdHrT:AddAddonOptions();
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
 	self:RegisterChatCommand("fdh", "ChatCommand")
-
-
     -- Called when the addon is loaded
 end
 
@@ -33,10 +35,21 @@ function FdHrT:OnEnable()
 end
 
 
-function FdHrT:AddOptions(options)
+function FdHrT:AddAddonDBDefaults(dbDefaults)
+	if dbDefaults then
+		FdHDbDefaults = FdHrT:tableMerge(FdHDbDefaults, dbDefaults)
+	end
+
+	self.db = LibStub("AceDB-3.0"):New("FdHrTDB", FdHDbDefaults, true)
+	FdHOptions.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+	return self.db
+end
+
+function FdHrT:AddAddonOptions(options)
 	if options then
 		FdHOptions = FdHrT:tableMerge(FdHOptions, options)
 	end
+
 	LibStub("AceConfig-3.0"):RegisterOptionsTable("FdHrT", FdHOptions)
 end
 

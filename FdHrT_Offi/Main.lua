@@ -10,6 +10,8 @@ local FdHrT = FdHrT
 local InvMembersString = "";
 local convert_to_raid = 0;
 
+--local dbDefaults = {};
+
 local options = { 
     args = {
         
@@ -54,8 +56,9 @@ end
 
 function FdHrTO:OnEnable()
 	self:Print("geladen")
-  FdHrT:AddOptions(options);
-  self:RegisterEvent("RAID_TARGET_UPDATE")
+  	--self.db = FdHrT:AddAddonDBDefaults(dbDefaults);
+	FdHrT:AddAddonOptions(options);
+  	self:RegisterEvent("RAID_TARGET_UPDATE")
 	-- Called when the addon is enabled
 end
 

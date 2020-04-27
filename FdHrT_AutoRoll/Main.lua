@@ -1,4 +1,4 @@
-local AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
+AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
 local FdHrT = FdHrT
 
 --wow api, tis will do a lot other addons, i'm not sure is it local a lot faster?
@@ -10,7 +10,62 @@ local GetPlayerInfo = C_LootHistory.GetPlayerInfo
 
 
 
-local loot_status_name = {[0]="passen", [1]="Bedarf", [2]="Gier"}
+local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
+local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
+
+
+local dbDefaults = {
+	profile = {
+		AutoRoll = {
+			enabled = false,
+			savedItems = { -- it will be possible to remember the decision on the roll frame. this is stored here
+				--[19698] = 0,
+			},
+			itemGroups = { -- When not stored in the savedItems it will check the items groups
+				{
+					description = "Grüne ZG Münzen im Raid gerecht aufteilen",
+					enabled = true,
+					items = {[19698]=true,[19699]=true,[19700]=true,[19701]=true,[19702]=true,[19703]=true,[19704]=true,[19705]=true,[19706]=true}, -- ugly but it will be a lot faster and more readable to check is a itemid in this list
+					rollOptionSuccsess = 2,
+					rollOptionFail = 0,
+					conditions = {
+						share = true,
+					},
+				},
+				{
+					description = "Blaue ZG Schmuckstücke der Hakkari im Raid gerecht aufteilen",
+					enabled = true,
+					items = {[19707]=true,[19708]=true,[19709]=true,[19710]=true,[19711]=true,[19712]=true,[19713]=true,[19714]=true,[19715]=true},
+					rollOptionSuccsess = 2,
+					rollOptionFail = 0,
+					conditions = {
+						share = true,
+					},
+				},
+				{ -- 
+					description = "Auf restliche Grüne und Blaue Items passen",
+					enabled = false,
+					items = {['*']=true}, 
+					rollOptionSuccsess = 0,
+					rollOptionFail = nil,
+					conditions = {
+						quality = {
+							"<=", 
+							3, --0 - Poor, 1 - Common, 2 - Uncommon, 3 - Rare, 4 - Epic, 5 - Legendary, 6 - Artifact, 7 - Heirloom, 8 - WoW Token
+						}, 
+						-- the following conditions are not implemented yet, and only a hint for me
+						-- dungeon = 309, -- condition work only in ZG
+						-- inGroupWith = {
+						--		oneOf = {"Player1","Player2","Player3"},
+						--		allOf = {"Player1","Player2","Player3"},
+						-- }, 
+						-- perhaps i add a lua solution to, we will see
+					},
+				},
+			},
+		},
+	},
+}
 
 local options = { 
     args = {
@@ -43,7 +98,7 @@ local options = {
       				name = "Roll Status",
       				desc = "auf grüne items wird automatisch:",
       				type = "select",
-      				values = loot_status_name,
+      				values = rollOptions,
       				get = "GetCrapRollStat",
       				set = "SetCrapRollStat",
       				style = "dropdown"
@@ -58,7 +113,7 @@ function AutoRoll:GetCrapRollStat(info)
 end
 
 function AutoRoll:SetCrapRollStat(info, value)
-	self:Print("setze Status auf: "..loot_status_name[value])
+	self:Print("setze Status auf: "..rollOptions[value])
 	Crap_Roll_Stat = value
 end
 
@@ -94,7 +149,9 @@ function AutoRoll:OnEnable()
     self:RegisterEvent("ZONE_CHANGED")
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
-    FdHrT:AddOptions(options);
+    -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
+    self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
+    FdHrT:AddAddonOptions(options);
 
     init()
 end
@@ -195,5 +252,5 @@ function AutoRoll:PrintStatus()
 	print("runde: "..loot_round);
 	print("has_won: "..has_won);
 	print("verteile alles: "..Round_Lood_All);
-	print("Für Müll wird automatisch "..loot_status_name[Crap_Roll_Stat].." gewählt")
+	print("Für Müll wird automatisch "..rollOptions[Crap_Roll_Stat].." gewählt")
 end
