@@ -8,7 +8,7 @@
 ## Notes-deDE: Gilden Tools der Fürsten der Hölle.
 
 ## Author: Nemolus
-## SavedVariables: ITEM_PROF_FLAGS
+## SavedVariables: FdHrTDB
 ## SavedVariablesPerCharacter: rolls party_member loot_counter has_loot loot_round has_won Round_Lood_All Crap_Roll_Stat
 
 libs.xml

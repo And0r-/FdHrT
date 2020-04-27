@@ -7,12 +7,17 @@ local FdHOptions = {
     handler = FdHrT,
     type = "group",
     args = {
+
         
     },
 }
 
-
+local dbDefaults = {
+	profile = {asdf = "test2",asdf1 = "test1",asdf2 = "test 2"}
+}
 function FdHrT:OnInitialize()
+	self.db = LibStub("AceDB-3.0"):New("FdHrTDB", dbDefaults, true)
+	FdHOptions.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 	self:RegisterChatCommand("rl", function() ReloadUI() end)
 	FdHrT:AddOptions();
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
