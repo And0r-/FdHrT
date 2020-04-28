@@ -2,7 +2,7 @@ FdHrT = LibStub("AceAddon-3.0"):NewAddon("FdHrT", "AceConsole-3.0")
 
 local InvMembersString = "";
 
-local FdHOptions = { 
+FdHOptions = { 
     name = "FdHrT",
     handler = FdHrT,
     type = "group",

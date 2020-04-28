@@ -14,7 +14,7 @@ local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
 
 
-local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua"}
+local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen"}
 
 
 local dbDefaults = {
@@ -79,38 +79,7 @@ local dbDefaults = {
 	},
 }
 
-local options = { 
-    args = {
-        
-        ar={
-        	handler = AutoRoll,
-      		name = "AutoRoll",
-      		type = "group",
-      		args={
-        		status = {
-      				name = "Status",
-      				desc = "Zeige addon status informationen",
-      				type = "execute",
-      				func = "PrintStatus"
-    			},
-    			reset = {
-      				name = "Reset",
-      				desc = "Setzt die gleichmässige itemvergabe zurück",
-      				type = "execute",
-      				func = "ResetFearLoot"
-    			},
-    			debug = {
-      				name = "Verteile alles",
-      				desc = "verteile alle items, nicht nur die münzen",
-      				type = "toggle",
-      				get = "IsDebug",
-      				set = "ToggleDebug",
-    			},
-    			
-      		}
-    	}
-    },
-}
+
 
 function AutoRoll:GetCrapRollStat(info)
 	self:Print(info.arg)
@@ -142,7 +111,7 @@ end
 
 
 function AutoRoll:OnInitialize()
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
+	
 
     -- Called when the addon is loaded
 end
@@ -151,123 +120,190 @@ end
 function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
-    self:RegisterEvent("ZONE_CHANGED")
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
     self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
-    self:AddGeneratedOptions();
-    FdHrT:AddAddonOptions(options);
+    local options = self:GetOptions();
+    FdHrT:AddAddonOptions(options); 
+    --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
 
     init()
 end
 
+function AutoRoll:GetOptions()
+	return { 
+	    args = {
+	        ar={
+	        	handler = AutoRoll,
+	      		name = "AutoRoll",
+	      		type = "group",
+	      		args = {
+					settings = {
+						name = "Loot Verteilen (share)",
+						type = "group",
+						inline = true,
+						order = 1,
+						args = self:GetOptionSettings(),
+				    },
+					itemGroups = {
+						name = "Regeln",
+						type = "group",
+						inline = true,
+						order = 2,
+						args = self:GetOptionItemGroups(),
+				    },
+		      	},
+		    },
+		},
+	}
+end
 
-function AutoRoll:AddGeneratedOptions()
 
-	for i,dbItemGroup in ipairs(self.db.itemGroups) do
+function AutoRoll:GetOptionSettings()
+	return {
+		status = {
+			name = "Status",
+			desc = "Zeige informationen über die share itemvergabe",
+			type = "execute",
+			order = 2,
+			func = "PrintStatus",
+		},
+		reset = {
+			name = "Reset",
+			desc = "Setzt die gleichmässige itemvergabe zurück",
+			type = "execute",
+			order = 3,
+			func = "ResetFearLoot",
+		},
+		nl2 = {
+			type = "header",
+			name = "",
+			order = 4,
+		},
+		debug = {
+			name = "Debug",
+			desc = "verteile alle items, nicht nur die münzen",
+			type = "toggle",
+			order = 5,
+			get = "IsDebug",
+			set = "ToggleDebug",
+		},
+	}
+end
 
-		options.args.ar.args["itemGroup"..i] = {
+
+function AutoRoll:GetOptionItemGroups()
+
+	local itemGroups = {}
+
+	for itemGroupId,dbItemGroup in ipairs(self.db.itemGroups) do
+
+		itemGroups["itemGroup"..itemGroupId] = {
 			name = dbItemGroup.description,
 			type = "group",
 			inline = true,
 			width = "full",
-			order  = i,
+			order  = itemGroupId,
 			args = {
 				enabled = {
-					name = "Aktivieren/Deaktivieren",
+					name = "Regel Gruppe ist Aktiv",
 					type = "toggle",
+					order = 1,
 					get = "IsItemGroupEnabled",
 					set = "ToggleItemGroupEnabled",
-					arg = i,
+					arg = itemGroupId,
 				},
 				--description = {
 				--	name = "Beschreibung",
 				--	type = "input",
 				--	get = "getItemGroupDescription",
 				--	set = "setItemGroupDescription",
-				--	arg = i,
+				--	arg = itemGroupId,
 				--	width = "full",
 				--},
 				items = {
 					name = "Items",
 					desc = ", separierte liste mit Item Id's oder 'all' für alle Items",
 					type = "input",
+					order = 2,
 					get = "getItemGroupItems",
 					set = "setItemGroupItems",
-					arg = i,
+					arg = itemGroupId,
 					width = "full",
 				},
 				conditions = {
 					name = "Regeln",
 					desc = "Bedingungen damit die Gruppe zum einsatz kommt",
 					type = "group",
+					order = 3,
 					inline = true,
 					width = "full",
-					args = {},
+					args = self:GetOptionItemGroupConditions(itemGroupId),
 				},
 				rs = {
       				name = "Roll Status",
       				desc = "Auf zutreffende Items automatisch:",
       				type = "select",
+      				order = 4,
       				values = rollOptions,
       				get = "GetItemGroupRollOptionSuccsess",
       				set = "SetItemGroupRollOptionSuccsess",
       				style = "dropdown",
-      				arg = i,
+      				arg = itemGroupId,
     			},
 			}
 		};
+	end
+	return itemGroups;
+end
 
+function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
+	local conditions = {}
+	conditions.addConditionButton = {
+		name = "Add",
+		desc = "Regel hinzufügen",
+		type = "execute",
+		order = -1,
+		func = "AddConditionOption",
+		arg = itemGroupId,
+	}
 
-		local addConditionButton = {
-			name = "Add",
-			desc = "Regel hinzufügen",
-			type = "execute",
-			order = -1,
-			func = "AddConditionOption",
-			arg = {i,condition_i},
-    	}
+	local order = 1;
+	for conditionId,condition in ipairs(self.db.itemGroups[itemGroupId].conditions) do
+		if condition.type ~= "deleted" then 
 
-    	local order = 1;
-		for condition_i,condition in ipairs(self.db.itemGroups[i].conditions) do
-			local condition_options = {
-      				name = "",
-      				desc = "",
-      				type = "select",
-      				order = order,
-      				values = conditionList,
-      				get = "GetConditionType",
-      				set = "SetConditionType",
-      				style = "dropdown",
-      				arg = {i,condition_i},
-    		}
-    		order = order +1;
+			conditions["condition"..conditionId] = {
+	  				name = "",
+	  				desc = "",
+	  				type = "select",
+	  				order = order,
+	  				values = conditionList,
+	  				get = "GetConditionType",
+	  				set = "SetConditionType",
+	  				style = "dropdown",
+	  				arg = {itemGroupId,conditionId},
+			}
+			order = order +1;
 
-    		--if condition_type = ""
-    		
-    		local optionNewline = {
+			--if condition_type = ""
+			
+			conditions["condition"..conditionId.."nl"] = {
 				type = "header",
 				name = "",
 				order = order,
 			}
-    		order = order +1;
-
-
-
-			options.args.ar.args["itemGroup"..i].args.conditions.args["condition"..condition_i] = condition_options
-			options.args.ar.args["itemGroup"..i].args.conditions.args["condition"..condition_i.."nl"] = optionNewline
-			
-
+			order = order +1;
 		end
-		options.args.ar.args["itemGroup"..i].args.conditions.args["addConditionButton"] = addConditionButton;
 	end
+
+	return conditions
 end
 
 function AutoRoll:AddConditionOption(info)
-	tinsert(self.db.itemGroups[info.arg[1]].conditions, {type = "share", args = {true}});
+	tinsert(self.db.itemGroups[info.arg].conditions, {type = "disabled", args = {true}});
 
-	self:AddGeneratedOptions();
+	options = self:GetOptions();
     FdHrT:AddAddonOptions(options);
 end
 
@@ -277,6 +313,11 @@ end
 
 function AutoRoll:SetConditionType(info, value)
 	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
+	if (value == "deleted") then
+		print("deleted... reload options")
+		options = self:GetOptions();
+    	FdHrT:AddAddonOptions(options);
+	end
 end
 
 function AutoRoll:GetItemGroupRollOptionSuccsess(info)
@@ -298,12 +339,10 @@ end
 function AutoRoll:getItemGroupItems(info)
 	local tmpItemList = {}
 	for itemId, value in pairs(self.db.itemGroups[info.arg].items) do
-		print(itemId)
 		tmpItemList[#tmpItemList+1] = itemId
 	end
 	sort(tmpItemList)
 	return table.concat(tmpItemList, ",")
-	--return strjoin(",", tostringall(unpack(tmpItemList)))
 end
 
 function AutoRoll:setItemGroupItems(info, value)
