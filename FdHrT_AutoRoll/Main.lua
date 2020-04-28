@@ -14,6 +14,9 @@ local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
 
 
+local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua"}
+
+
 local dbDefaults = {
 	profile = {
 		AutoRoll = {
@@ -25,21 +28,27 @@ local dbDefaults = {
 				{
 					description = "Grüne ZG Münzen im Raid gerecht aufteilen",
 					enabled = true,
-					items = {[19698]=true,[19699]=true,[19700]=true,[19701]=true,[19702]=true,[19703]=true,[19704]=true,[19705]=true,[19706]=true}, -- ugly but it will be a lot faster and more readable to check is a itemid in this list
+					items = {["19698"]=true,["19699"]=true,["19700"]=true,["19701"]=true,["19702"]=true,["19703"]=true,["19704"]=true,["19705"]=true,["19706"]=true}, -- ugly but it will be a lot faster and more readable to check is a itemid in this list
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
-						share = true,
+						[1] = {
+							type = "share",
+							args = {true}
+						},
 					},
 				},
 				{
 					description = "Blaue ZG Schmuckstücke der Hakkari im Raid gerecht aufteilen",
 					enabled = true,
-					items = {[19707]=true,[19708]=true,[19709]=true,[19710]=true,[19711]=true,[19712]=true,[19713]=true,[19714]=true,[19715]=true},
+					items = {["19707"]=true,["19708"]=true,["19709"]=true,["19710"]=true,["19711"]=true,["19712"]=true,["19713"]=true,["19714"]=true,["19715"]=true},
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
-						share = true,
+						[1] = {
+							type = "share",
+							args = {true},
+						},
 					},
 				},
 				{ -- 
@@ -49,10 +58,13 @@ local dbDefaults = {
 					rollOptionSuccsess = 0,
 					rollOptionFail = nil,
 					conditions = {
-						quality = {
-							"<=", 
-							3, --0 - Poor, 1 - Common, 2 - Uncommon, 3 - Rare, 4 - Epic, 5 - Legendary, 6 - Artifact, 7 - Heirloom, 8 - WoW Token
-						}, 
+						[1] = {
+							type = "quality",
+							args = {
+								"<=", 
+								3, --0 - Poor, 1 - Common, 2 - Uncommon, 3 - Rare, 4 - Epic, 5 - Legendary, 6 - Artifact, 7 - Heirloom, 8 - WoW Token
+							}, 
+						}
 						-- the following conditions are not implemented yet, and only a hint for me
 						-- dungeon = 309, -- condition work only in ZG
 						-- inGroupWith = {
@@ -94,16 +106,7 @@ local options = {
       				get = "IsDebug",
       				set = "ToggleDebug",
     			},
-    			rs = {
-      				name = "Roll Status",
-      				desc = "auf grüne items wird automatisch:",
-      				type = "select",
-      				values = rollOptions,
-      				get = "GetCrapRollStat",
-      				set = "SetCrapRollStat",
-      				style = "dropdown",
-      				arg = "mein test",
-    			},
+    			
       		}
     	}
     },
@@ -166,10 +169,11 @@ function AutoRoll:AddGeneratedOptions()
 	for i,dbItemGroup in ipairs(self.db.itemGroups) do
 
 		options.args.ar.args["itemGroup"..i] = {
-			name = "itemGroup"..i,
+			name = dbItemGroup.description,
 			type = "group",
 			inline = true,
 			width = "full",
+			order  = i,
 			args = {
 				enabled = {
 					name = "Aktivieren/Deaktivieren",
@@ -178,14 +182,14 @@ function AutoRoll:AddGeneratedOptions()
 					set = "ToggleItemGroupEnabled",
 					arg = i,
 				},
-				description = {
-					name = "Beschreibung",
-					type = "input",
-					get = "getItemGroupDescription",
-					set = "setItemGroupDescription",
-					arg = i,
-					width = "full",
-				},
+				--description = {
+				--	name = "Beschreibung",
+				--	type = "input",
+				--	get = "getItemGroupDescription",
+				--	set = "setItemGroupDescription",
+				--	arg = i,
+				--	width = "full",
+				--},
 				items = {
 					name = "Items",
 					desc = ", separierte liste mit Item Id's oder 'all' für alle Items",
@@ -195,14 +199,66 @@ function AutoRoll:AddGeneratedOptions()
 					arg = i,
 					width = "full",
 				},
+				conditions = {
+					name = "Regeln",
+					desc = "Bedingungen damit die Gruppe zum einsatz kommt",
+					type = "group",
+					inline = false,
+					--childGroups = "tab",
+					width = "full",
+					args = {},
+				},
+				rs = {
+      				name = "Roll Status",
+      				desc = "Auf zutreffende Items automatisch:",
+      				type = "select",
+      				values = rollOptions,
+      				get = "GetItemGroupRollOptionSuccsess",
+      				set = "SetItemGroupRollOptionSuccsess",
+      				style = "dropdown",
+      				arg = i,
+    			},
 			}
-		}
+		};
 
+		for condition_i,condition in ipairs(self.db.itemGroups[i].conditions) do
+			print(self.db.itemGroups[i].conditions[condition_i].type)
+			local condition_options = {
+      				name = "",
+      				desc = "",
+      				type = "select",
+      				values = conditionList,
+      				get = "GetConditionType",
+      				set = "SetConditionType",
+      				style = "dropdown",
+      				arg = {i,condition_i},
+    			}
+
+			--if condition_type = ""
+
+			options.args.ar.args["itemGroup"..i].args.conditions.args["condition"..condition_i] = condition_options
+
+		end
 	end
 end
 
+	
 
+function AutoRoll:GetConditionType(info)
+	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type
+end
 
+function AutoRoll:SetConditionType(info, value)
+	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
+end
+
+function AutoRoll:GetItemGroupRollOptionSuccsess(info)
+	return self.db.itemGroups[info.arg].rollOptionSuccsess
+end
+
+function AutoRoll:SetItemGroupRollOptionSuccsess(info, value)
+	self.db.itemGroups[info.arg].rollOptionSuccsess = value
+end
 
 function AutoRoll:getItemGroupDescription(info)
 	return self.db.itemGroups[info.arg].description
@@ -215,13 +271,19 @@ end
 function AutoRoll:getItemGroupItems(info)
 	local tmpItemList = {}
 	for itemId, value in pairs(self.db.itemGroups[info.arg].items) do
+		print(itemId)
 		tmpItemList[#tmpItemList+1] = itemId
 	end
-	return strjoin(",", tostringall(unpack(tmpItemList)))
+	sort(tmpItemList)
+	return table.concat(tmpItemList, ",")
+	--return strjoin(",", tostringall(unpack(tmpItemList)))
 end
 
 function AutoRoll:setItemGroupItems(info, value)
-	self.db.itemGroups[info.arg].items = value
+	self.db.itemGroups[info.arg].items = {};
+	for tmp_i,v in ipairs({strsplit(",", value)}) do
+		self.db.itemGroups[info.arg].items[v] = true
+	end
 end
 
 function AutoRoll:IsItemGroupEnabled(info)
