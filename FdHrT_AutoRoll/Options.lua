@@ -177,9 +177,9 @@ function AutoRoll:AddItemConditons(conditions,order,itemGroupId,conditionId)
 		desc = ", separierte liste mit Item Id's. Z.b: 19698,19699,19700",
 		type = "input",
 		order = order,
-		get = "getItemGroupItems",
-		set = "setItemGroupItems",
-		arg = itemGroupId,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		arg = {itemGroupId,conditionId,1},
 		width = 1.9,
 	}
 	order = order +1
@@ -187,6 +187,13 @@ function AutoRoll:AddItemConditons(conditions,order,itemGroupId,conditionId)
 	return conditions, order;
 end
 
+function AutoRoll:GetConditionArg(info)
+	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]]
+end
+
+function AutoRoll:SetConditionArg(info, value)
+	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]] = value
+end
 
 function AutoRoll:GetCrapRollStat(info)
 	self:Print(info.arg)
@@ -244,22 +251,6 @@ end
 
 function AutoRoll:setItemGroupDescription(info, value)
 	self.db.itemGroups[info.arg].description = value
-end
-
-function AutoRoll:getItemGroupItems(info)
-	local tmpItemList = {}
-	for itemId, value in pairs(self.db.itemGroups[info.arg].items) do
-		tmpItemList[#tmpItemList+1] = itemId
-	end
-	sort(tmpItemList)
-	return table.concat(tmpItemList, ",")
-end
-
-function AutoRoll:setItemGroupItems(info, value)
-	self.db.itemGroups[info.arg].items = {};
-	for tmp_i,v in ipairs({strsplit(",", value)}) do
-		self.db.itemGroups[info.arg].items[v] = true
-	end
 end
 
 function AutoRoll:IsItemGroupEnabled(info)

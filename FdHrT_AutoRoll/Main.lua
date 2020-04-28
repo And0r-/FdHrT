@@ -20,7 +20,6 @@ local dbDefaults = {
 				{
 					description = "Grüne ZG Münzen im Raid gerecht aufteilen",
 					enabled = true,
-					items = {["old"]=true}, -- ugly but it will be a lot faster and more readable to check is a itemid in this list
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
@@ -30,14 +29,13 @@ local dbDefaults = {
 						},
 						[2] = {
 							type = "item",
-							args = {["19698"]=true,["19699"]=true,["19700"]=true,["19701"]=true,["19702"]=true,["19703"]=true,["19704"]=true,["19705"]=true,["19706"]=true},
+							args = {"19698,19699,19700,19701,19702,19703,19704,19705,19706"},
 						}
 					},
 				},
 				{
 					description = "Blaue ZG Schmuckstücke der Hakkari im Raid gerecht aufteilen",
 					enabled = true,
-					items = {["19707"]=true,["19708"]=true,["19709"]=true,["19710"]=true,["19711"]=true,["19712"]=true,["19713"]=true,["19714"]=true,["19715"]=true},
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
@@ -47,7 +45,7 @@ local dbDefaults = {
 						},
 						[2] = {
 							type = "item",
-							args = {["19707"]=true,["19708"]=true,["19709"]=true,["19710"]=true,["19711"]=true,["19712"]=true,["19713"]=true,["19714"]=true,["19715"]=true},
+							args = {"19707,19708,19709,19710,19711,19712,19713,19714,19715"},
 						}
 					},
 				},
