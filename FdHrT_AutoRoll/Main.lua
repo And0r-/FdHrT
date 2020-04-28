@@ -14,7 +14,7 @@ local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
 
 
-local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen"}
+local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
 
 
 local dbDefaults = {
@@ -34,8 +34,12 @@ local dbDefaults = {
 					conditions = {
 						[1] = {
 							type = "share",
-							args = {true}
+							args = {true},
 						},
+						[2] = {
+							type = "item",
+							args = {["19698"]=true,["19699"]=true,["19700"]=true,["19701"]=true,["19702"]=true,["19703"]=true,["19704"]=true,["19705"]=true,["19706"]=true},
+						}
 					},
 				},
 				{
@@ -49,6 +53,10 @@ local dbDefaults = {
 							type = "share",
 							args = {true},
 						},
+						[2] = {
+							type = "item",
+							args = {["19707"]=true,["19708"]=true,["19709"]=true,["19710"]=true,["19711"]=true,["19712"]=true,["19713"]=true,["19714"]=true,["19715"]=true},
+						}
 					},
 				},
 				{ -- 
@@ -79,8 +87,6 @@ local dbDefaults = {
 	},
 }
 
-
-
 function AutoRoll:GetCrapRollStat(info)
 	self:Print(info.arg)
 	return Crap_Roll_Stat
@@ -104,11 +110,6 @@ function AutoRoll:ToggleDebug(info)
 		Round_Lood_All = 1
 	end
 end
-
-
-
-
-
 
 function AutoRoll:OnInitialize()
 	
@@ -242,7 +243,7 @@ function AutoRoll:GetOptionItemGroups()
 					args = self:GetOptionItemGroupConditions(itemGroupId),
 				},
 				rs = {
-      				name = "Roll Status",
+      				name = "Wenn alle regeln der Gruppe er",
       				desc = "Auf zutreffende Items automatisch:",
       				type = "select",
       				order = 4,
@@ -314,7 +315,9 @@ end
 function AutoRoll:SetConditionType(info, value)
 	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
 	if (value == "deleted") then
-		print("deleted... reload options")
+		-- I have to find a other way to delete options. at the moment i merge the table of changed sub addons with the global one.
+		FdHOptions.args.ar.args.itemGroups.args["itemGroup"..info.arg[1]].args.conditions.args["condition"..info.arg[2]] = nil -- Remove the condition from the global options
+		FdHOptions.args.ar.args.itemGroups.args["itemGroup"..info.arg[1]].args.conditions.args["condition"..info.arg[2].."nl"] = nil -- Remove the condition newline from the global options
 		options = self:GetOptions();
     	FdHrT:AddAddonOptions(options);
 	end
