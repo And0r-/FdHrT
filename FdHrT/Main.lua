@@ -6,6 +6,7 @@ local FdHOptions = {
     name = "FdHrT",
     handler = FdHrT,
     type = "group",
+    childGroups = "tab",
     args = {
 
         

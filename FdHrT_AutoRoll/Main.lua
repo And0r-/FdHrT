@@ -142,8 +142,7 @@ end
 
 
 function AutoRoll:OnInitialize()
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options["args"]["ar"], {"ar"})
-	AutoRoll.message = "Welcome Home!"
+	LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
 
     -- Called when the addon is loaded
 end
@@ -203,8 +202,7 @@ function AutoRoll:AddGeneratedOptions()
 					name = "Regeln",
 					desc = "Bedingungen damit die Gruppe zum einsatz kommt",
 					type = "group",
-					inline = false,
-					--childGroups = "tab",
+					inline = true,
 					width = "full",
 					args = {},
 				},
@@ -221,28 +219,57 @@ function AutoRoll:AddGeneratedOptions()
 			}
 		};
 
+
+		local addConditionButton = {
+			name = "Add",
+			desc = "Regel hinzufügen",
+			type = "execute",
+			order = -1,
+			func = "AddConditionOption",
+			arg = {i,condition_i},
+    	}
+
+    	local order = 1;
 		for condition_i,condition in ipairs(self.db.itemGroups[i].conditions) do
-			print(self.db.itemGroups[i].conditions[condition_i].type)
 			local condition_options = {
       				name = "",
       				desc = "",
       				type = "select",
+      				order = order,
       				values = conditionList,
       				get = "GetConditionType",
       				set = "SetConditionType",
       				style = "dropdown",
       				arg = {i,condition_i},
-    			}
+    		}
+    		order = order +1;
 
-			--if condition_type = ""
+    		--if condition_type = ""
+    		
+    		local optionNewline = {
+				type = "header",
+				name = "",
+				order = order,
+			}
+    		order = order +1;
+
+
 
 			options.args.ar.args["itemGroup"..i].args.conditions.args["condition"..condition_i] = condition_options
+			options.args.ar.args["itemGroup"..i].args.conditions.args["condition"..condition_i.."nl"] = optionNewline
+			
 
 		end
+		options.args.ar.args["itemGroup"..i].args.conditions.args["addConditionButton"] = addConditionButton;
 	end
 end
 
-	
+function AutoRoll:AddConditionOption(info)
+	tinsert(self.db.itemGroups[info.arg[1]].conditions, {type = "share", args = {true}});
+
+	self:AddGeneratedOptions();
+    FdHrT:AddAddonOptions(options);
+end
 
 function AutoRoll:GetConditionType(info)
 	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type
@@ -295,12 +322,6 @@ function AutoRoll:ToggleItemGroupEnabled(info, value)
 end
 
 
-
-
-
-function AutoRoll:ZONE_CHANGED()
-    self:Print(self.message)
-end
 
 function AutoRoll:START_LOOT_ROLL(event, rollid)
 	local texture, name, count, quality, bindOnPickUp, canNeed, canGreed, canDisenchant, reasonNeed, reasonGreed, reasonDisenchant, deSkillRequired = GetLootRollItemInfo(rollid);
