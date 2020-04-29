@@ -20,14 +20,14 @@ local dbDefaults = {
 				{
 					description = "Grüne ZG Münzen im Raid gerecht aufteilen",
 					enabled = true,
+					share = {
+						enabled = true,
+						size = "raid"
+					},
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
 						[1] = {
-							type = "share",
-							args = {true},
-						},
-						[2] = {
 							type = "item",
 							args = {"19698,19699,19700,19701,19702,19703,19704,19705,19706"},
 						}
@@ -36,14 +36,13 @@ local dbDefaults = {
 				{
 					description = "Blaue ZG Schmuckstücke der Hakkari im Raid gerecht aufteilen",
 					enabled = true,
+					share = {
+						enabled = true,
+					},
 					rollOptionSuccsess = 2,
 					rollOptionFail = 0,
 					conditions = {
 						[1] = {
-							type = "share",
-							args = {true},
-						},
-						[2] = {
 							type = "item",
 							args = {"19707,19708,19709,19710,19711,19712,19713,19714,19715"},
 						}
@@ -51,8 +50,10 @@ local dbDefaults = {
 				},
 				{ -- 
 					description = "Auf restliche Grüne und Blaue Items passen",
-					enabled = false,
-					items = {["all"]=true}, 
+					enabled = false, 
+					share = {
+						enabled = false,
+					},
 					rollOptionSuccsess = 0,
 					rollOptionFail = nil,
 					conditions = {
@@ -78,7 +79,8 @@ local dbDefaults = {
 }
 
 function AutoRoll:OnInitialize()
-	
+	--self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
+	--self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT_AutoRoll", "AutoRoll", "FdH Raid Tool")
 
     -- Called when the addon is loaded
 end
@@ -92,7 +94,7 @@ function AutoRoll:OnEnable()
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
     self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
     local options = self:GetOptions();
-    FdHrT:AddAddonOptions(options); 
+    FdHrT:AddAddonOptions(options,"AutoRoll");
     --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
 
     init()

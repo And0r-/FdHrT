@@ -3,14 +3,16 @@ FdHrT = LibStub("AceAddon-3.0"):NewAddon("FdHrT", "AceConsole-3.0")
 local InvMembersString = "";
 
 FdHOptions = { 
-    name = "FdHrT",
-    handler = FdHrT,
-    type = "group",
-    childGroups = "tab",
-    args = {
+	FdHrT = {
+	    name = "",
+	    handler = FdHrT,
+	    type = "group",
+	    childGroups = "tab",
+	    args = {
 
-        
-    },
+	        
+	    },
+	}
 }
 
 local FdHDbDefaults = {
@@ -26,6 +28,7 @@ function FdHrT:OnInitialize()
 	FdHrT:AddAddonDBDefaults();
     FdHrT:AddAddonOptions();
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
+	self.optionsFrame2 = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AutoRoll", "AutoRoll", "FdH Raid Tool")
 	self:RegisterChatCommand("fdh", "ChatCommand")
     -- Called when the addon is loaded
 end
@@ -42,16 +45,22 @@ function FdHrT:AddAddonDBDefaults(dbDefaults)
 	end
 
 	self.db = LibStub("AceDB-3.0"):New("FdHrTDB", FdHDbDefaults, true)
-	FdHOptions.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+	FdHOptions.FdHrT.args.profiles = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 	return self.db
 end
 
-function FdHrT:AddAddonOptions(options)
+function FdHrT:AddAddonOptions(options,parent)
+	if parent == nil then
+		parent = "FdHrT"
+	end
+	if FdHOptions[parent] == nil then
+		FdHOptions[parent] = {}
+	end
 	if options then
-		FdHOptions = FdHrT:tableMerge(FdHOptions, options)
+		FdHOptions[parent] = FdHrT:tableMerge(FdHOptions[parent], options)
 	end
 
-	LibStub("AceConfig-3.0"):RegisterOptionsTable("FdHrT", FdHOptions)
+	LibStub("AceConfig-3.0"):RegisterOptionsTable(parent, FdHOptions[parent])
 end
 
 function FdHrT:ChatCommand(input)

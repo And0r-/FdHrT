@@ -8,33 +8,29 @@ local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
 
 
-local conditionList = {["share"]="Share", ["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
+local conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
+
 
 function AutoRoll:GetOptions()
 	return { 
-	    args = {
-	        ar={
-	        	handler = AutoRoll,
-	      		name = "AutoRoll",
-	      		type = "group",
-	      		args = {
-					settings = {
-						name = "Loot Verteilen (share)",
-						type = "group",
-						inline = true,
-						order = 1,
-						args = self:GetOptionSettings(),
-				    },
-					itemGroups = {
-						name = "Regeln",
-						type = "group",
-						inline = true,
-						order = 2,
-						args = self:GetOptionItemGroups(),
-				    },
-		      	},
+    	handler = AutoRoll,
+  		name = "",
+  		type = "group",
+  		childGroups = "tab",
+  		args = {
+			settings = {
+				name = "Debug",
+				type = "group",
+				order = 2,
+				args = self:GetOptionSettings(),
 		    },
-		},
+			itemGroups = {
+				name = "Regeln",
+				type = "group",
+				order = 1,
+				args = self:GetOptionItemGroups(),
+		    },
+      	},
 	}
 end
 
@@ -73,7 +69,13 @@ end
 
 function AutoRoll:GetOptionItemGroups()
 
-	local itemGroups = {}
+	local itemGroups = {
+		headerDescription = {
+			type = "description",
+			name = "Hier können verschiedene Gruppen definiert werden. \rWenn alle Regeln der ersten gruppe erfüllt sind, wird die Aktion ausgeführt. \rWenn nicht, wird die nächste Gruppe überprüft.",
+			order = 0,
+		},
+	}
 
 	for itemGroupId,dbItemGroup in ipairs(self.db.itemGroups) do
 
@@ -92,6 +94,16 @@ function AutoRoll:GetOptionItemGroups()
 					set = "ToggleItemGroupEnabled",
 					arg = itemGroupId,
 				},
+				share = {
+					name = "Aufteilen",
+					desc = "In gruppe Aufteilen",
+					type = "toggle",
+					order = 2,
+					get = "IsItemGroupShareEnabled",
+					set = "ToggleItemGroupShareEnabled",
+					arg = itemGroupId,
+				},
+				shareOptions = self:GetItemGroupShareOptions(itemGroupId), 
 				--description = {
 				--	name = "Beschreibung",
 				--	type = "input",
@@ -104,16 +116,16 @@ function AutoRoll:GetOptionItemGroups()
 					name = "Regeln",
 					desc = "Bedingungen damit die Gruppe zum einsatz kommt",
 					type = "group",
-					order = 3,
+					order = 4,
 					inline = true,
 					width = "full",
 					args = self:GetOptionItemGroupConditions(itemGroupId),
 				},
 				rs = {
-      				name = "Wenn alle regeln der Gruppe er",
-      				desc = "Auf zutreffende Items automatisch:",
+      				name = "Automatisch Würfeln:",
+      				desc = "Gibt an was mit den Items geschehen soll, welche alle Regeln erfüllen.",
       				type = "select",
-      				order = 4,
+      				order = 5,
       				values = rollOptions,
       				get = "GetItemGroupRollOptionSuccsess",
       				set = "SetItemGroupRollOptionSuccsess",
@@ -124,6 +136,25 @@ function AutoRoll:GetOptionItemGroups()
 		};
 	end
 	return itemGroups;
+end
+
+function AutoRoll:GetItemGroupShareOptions(itemGroupId)
+	print("sharedOption from itemGroupId: "..itemGroupId)
+	return {
+		name = "",
+		type = "group",
+		width = "full",
+		order  = 3,
+		hidden = self:IsItemGroupShareEnabled({["arg"]=itemGroupId}) == false,
+		args = {
+			description = {
+				name = "Aufteilen ist aktiv. Auf ein Item wird nur gefürfelt bis man eins hat. \rDanach wird gepasst bis alle eins haben.",
+				type = "description",
+				order = 1,
+			},
+		},
+		arg = itemGroupId,
+	}
 end
 
 function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
@@ -221,7 +252,7 @@ function AutoRoll:AddConditionOption(info)
 	tinsert(self.db.itemGroups[info.arg].conditions, {type = "disabled", args = {true}});
 
 	options = self:GetOptions();
-    FdHrT:AddAddonOptions(options);
+    FdHrT:AddAddonOptions(options,"AutoRoll");
 end
 
 function AutoRoll:GetConditionType(info)
@@ -232,9 +263,9 @@ function AutoRoll:SetConditionType(info, value)
 	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
 
 	-- I have to find a other way to delete options. at the moment i merge the table of changed sub addons with the global one.
-	FdHOptions.args.ar.args.itemGroups.args["itemGroup"..info.arg[1]].args.conditions = nil -- Remove the conditions from the global options
+	FdHOptions.AutoRoll.args.itemGroups.args["itemGroup"..info.arg[1]].args.conditions = nil -- Remove the conditions from the global options
 	options = self:GetOptions();
-	FdHrT:AddAddonOptions(options);
+	FdHrT:AddAddonOptions(options,"AutoRoll");
 end
 
 function AutoRoll:GetItemGroupRollOptionSuccsess(info)
@@ -261,3 +292,15 @@ function AutoRoll:ToggleItemGroupEnabled(info, value)
 	self.db.itemGroups[info.arg].enabled = value
 end
 
+function AutoRoll:IsItemGroupShareEnabled(info)
+	return self.db.itemGroups[info.arg].share.enabled
+end
+
+function AutoRoll:ToggleItemGroupShareEnabled(info, value)
+	self.db.itemGroups[info.arg].share.enabled = value
+	FdHOptions.AutoRoll.args.itemGroups.args["itemGroup"..info.arg] = nil -- Remove the conditions from the global options
+	options = self:GetOptions();
+	FdHrT:AddAddonOptions(options,"AutoRoll");
+end
+
+ 
