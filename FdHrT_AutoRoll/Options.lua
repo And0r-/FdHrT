@@ -3,13 +3,12 @@ local FdHrT = FdHrT
 
 
 
-
+local conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
 local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
+local dungeonList = {[697]="Zul'Gurub",[718]="Ony", [696]="MC", [755]="BWL"}
 
-
-local conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
-
+local conditionOperaters = {["="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
 
 function AutoRoll:GetOptions()
 	return { 
@@ -87,7 +86,8 @@ function AutoRoll:GetOptionItemGroups()
 			order  = itemGroupId,
 			args = {
 				enabled = {
-					name = "Regel Gruppe ist Aktiv",
+					name = "Aktiv",
+					desc = "Regel Gruppe ist Aktiv",
 					type = "toggle",
 					order = 1,
 					get = "IsItemGroupEnabled",
@@ -104,14 +104,15 @@ function AutoRoll:GetOptionItemGroups()
 					arg = itemGroupId,
 				},
 				shareOptions = self:GetItemGroupShareOptions(itemGroupId), 
-				--description = {
-				--	name = "Beschreibung",
-				--	type = "input",
-				--	get = "getItemGroupDescription",
-				--	set = "setItemGroupDescription",
-				--	arg = itemGroupId,
-				--	width = "full",
-				--},
+				description = {
+					name = "Beschreibung",
+					type = "input",
+					order = 0,
+					get = "getItemGroupDescription",
+					set = "setItemGroupDescription",
+					arg = itemGroupId,
+					width = "full",
+				},
 				conditions = {
 					name = "Regeln",
 					desc = "Bedingungen damit die Gruppe zum einsatz kommt",
@@ -125,7 +126,7 @@ function AutoRoll:GetOptionItemGroups()
       				name = "Automatisch Würfeln:",
       				desc = "Gibt an was mit den Items geschehen soll, welche alle Regeln erfüllen.",
       				type = "select",
-      				order = 5,
+      				order = 6,
       				values = rollOptions,
       				get = "GetItemGroupRollOptionSuccsess",
       				set = "SetItemGroupRollOptionSuccsess",
@@ -135,11 +136,20 @@ function AutoRoll:GetOptionItemGroups()
 			}
 		};
 	end
+
+	itemGroups.addItemGroupButton = {
+		name = "Gruppe hinzufügen",
+		desc = "Gruppe hinzufügen",
+		type = "execute",
+		order = -1,
+		func = "AddItemGroupOption",
+		--arg = itemGroupId,
+	}
+
 	return itemGroups;
 end
 
 function AutoRoll:GetItemGroupShareOptions(itemGroupId)
-	print("sharedOption from itemGroupId: "..itemGroupId)
 	return {
 		name = "",
 		type = "group",
@@ -160,13 +170,15 @@ end
 function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
 	local conditions = {}
 	conditions.addConditionButton = {
-		name = "Add",
+		name = "Regel hinzufügen",
 		desc = "Regel hinzufügen",
 		type = "execute",
 		order = -1,
 		func = "AddConditionOption",
 		arg = itemGroupId,
 	}
+
+	if self.db.itemGroups[itemGroupId].conditions == nil then return conditions end
 
 	local order = 1;
 	for conditionId,condition in ipairs(self.db.itemGroups[itemGroupId].conditions) do
@@ -185,7 +197,13 @@ function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
 	  				arg = {itemGroupId,conditionId},
 			}
 			order = order +1;
-			if condition.type == "item" then conditions, order =self:AddItemConditons(conditions,order,itemGroupId,conditionId) end
+
+			if condition.type == "item" then conditions, order =self:AddItemConditonOptions(conditions,order,itemGroupId,conditionId) end
+			if condition.type == "quality" then conditions, order =self:AddQualityConditonOptions(conditions,order,itemGroupId,conditionId) end
+			if condition.type == "dungeon" then conditions, order =self:AddDungeonConditonOptions(conditions,order,itemGroupId,conditionId) end
+			if condition.type == "party_member" then conditions, order =self:AddPartyMemberConditonOptions(conditions,order,itemGroupId,conditionId) end
+			if condition.type == "lua" then conditions, order =self:AddLuaConditonOptions(conditions,order,itemGroupId,conditionId) end
+
 
 			conditions["condition"..conditionId.."nl"] = {
 				type = "header",
@@ -200,7 +218,7 @@ function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
 end
 
 
-function AutoRoll:AddItemConditons(conditions,order,itemGroupId,conditionId)
+function AutoRoll:AddItemConditonOptions(conditions,order,itemGroupId,conditionId)
 --		arg = {itemGroupId,conditionId},
 
 	conditions["condition"..conditionId.."Items"] = {
@@ -212,6 +230,104 @@ function AutoRoll:AddItemConditons(conditions,order,itemGroupId,conditionId)
 		set = "SetConditionArg",
 		arg = {itemGroupId,conditionId,1},
 		width = 1.9,
+	}
+	order = order +1
+
+	return conditions, order;
+end
+
+function AutoRoll:AddQualityConditonOptions(conditions,order,itemGroupId,conditionId)
+--		arg = {itemGroupId,conditionId},
+
+	conditions["condition"..conditionId.."QualityOperator"] = {
+		name = "",
+		desc = "",
+		type = "select",
+		order = order,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		style = "dropdown",
+		values = conditionOperaters,
+		arg = {itemGroupId,conditionId,1},
+	}
+	order = order +1
+
+	conditions["condition"..conditionId.."Quality"] = {
+		name = "",
+		desc = "Item Qualität",
+		type = "select",
+		order = order,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		style = "dropdown",
+		values = itemQuality,
+		arg = {itemGroupId,conditionId,2},
+	}
+	order = order +1
+
+	return conditions, order;
+end
+
+function AutoRoll:AddDungeonConditonOptions(conditions,order,itemGroupId,conditionId)
+--		arg = {itemGroupId,conditionId},
+
+	conditions["condition"..conditionId.."Dungeon"] = {
+		name = "",
+		desc = "Item Qualität",
+		type = "select",
+		order = order,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		style = "dropdown",
+		values = dungeonList,
+		arg = {itemGroupId,conditionId,1},
+	}
+	order = order +1
+
+	return conditions, order;
+end
+
+function AutoRoll:AddPartyMemberConditonOptions(conditions,order,itemGroupId,conditionId)
+--		arg = {itemGroupId,conditionId},
+	conditions["condition"..conditionId.."PartyMemberOperator"] = {
+		name = "",
+		desc = "Item Qualität",
+		type = "select",
+		order = order,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		style = "dropdown",
+		values = {["oneOf"]="Einer von",["allOf"]="Alle von"},
+		arg = {itemGroupId,conditionId,1},
+	}
+	order = order +1
+
+	conditions["condition"..conditionId.."PartyMember"] = {
+		name = "",
+		desc = ", separierte liste von Spielernamen",
+		type = "input",
+		order = order,
+		get = "GetConditionArg",
+		set = "SetConditionArg",
+		arg = {itemGroupId,conditionId,2},
+	}
+	order = order +1
+
+	return conditions, order;
+end
+
+function AutoRoll:AddLuaConditonOptions(conditions,order,itemGroupId,conditionId)
+--		arg = {itemGroupId,conditionId},
+
+	conditions["condition"..conditionId.."Lua"] = {
+		name = "Noch nicht umgesetzt, kommt bald :D",
+		desc = "",
+		type = "description",
+		order = order,
+		--get = "GetConditionArg",
+		--set = "SetConditionArg",
+		--arg = {itemGroupId,conditionId,1},
+		--width = 1.9,
 	}
 	order = order +1
 
@@ -249,11 +365,20 @@ function AutoRoll:ToggleDebug(info)
 end
 
 function AutoRoll:AddConditionOption(info)
+	if self.db.itemGroups[info.arg].conditions == nil then self.db.itemGroups[info.arg].conditions = {} end
 	tinsert(self.db.itemGroups[info.arg].conditions, {type = "disabled", args = {true}});
 
 	options = self:GetOptions();
     FdHrT:AddAddonOptions(options,"AutoRoll");
 end
+
+function AutoRoll:AddItemGroupOption(info)
+	tinsert(self.db.itemGroups, {description = "Neue Gruppe", conditions = {}});
+
+	options = self:GetOptions();
+    FdHrT:AddAddonOptions(options,"AutoRoll");
+end
+
 
 function AutoRoll:GetConditionType(info)
 	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type
@@ -282,6 +407,9 @@ end
 
 function AutoRoll:setItemGroupDescription(info, value)
 	self.db.itemGroups[info.arg].description = value
+
+	options = self:GetOptions();
+	FdHrT:AddAddonOptions(options,"AutoRoll");
 end
 
 function AutoRoll:IsItemGroupEnabled(info)
@@ -293,7 +421,11 @@ function AutoRoll:ToggleItemGroupEnabled(info, value)
 end
 
 function AutoRoll:IsItemGroupShareEnabled(info)
-	return self.db.itemGroups[info.arg].share.enabled
+	if self.db.itemGroups[info.arg].share == nil then
+		return false
+	else
+		return self.db.itemGroups[info.arg].share.enabled
+	end
 end
 
 function AutoRoll:ToggleItemGroupShareEnabled(info, value)

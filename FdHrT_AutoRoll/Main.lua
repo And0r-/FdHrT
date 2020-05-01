@@ -12,7 +12,11 @@ local GetPlayerInfo = C_LootHistory.GetPlayerInfo
 local dbDefaults = {
 	profile = {
 		AutoRoll = {
-			enabled = false,
+			enabled = true, -- the addon self is enabled per default
+			raidItemGroupsEnabled = true, -- use a group config to auto roll in a raid from a guild leader
+			savedItemsEnabled = true, -- add the options to store 
+			profileItemGroupsEnabled = false, -- on default it should not use any ItemGroups to auto roll.
+
 			savedItems = { -- it will be possible to remember the decision on the roll frame. this is stored here
 				--[19698] = 0,
 			},
@@ -25,7 +29,6 @@ local dbDefaults = {
 						size = "raid"
 					},
 					rollOptionSuccsess = 2,
-					rollOptionFail = 0,
 					conditions = {
 						[1] = {
 							type = "item",
@@ -40,7 +43,6 @@ local dbDefaults = {
 						enabled = true,
 					},
 					rollOptionSuccsess = 2,
-					rollOptionFail = 0,
 					conditions = {
 						[1] = {
 							type = "item",
@@ -55,7 +57,6 @@ local dbDefaults = {
 						enabled = false,
 					},
 					rollOptionSuccsess = 0,
-					rollOptionFail = nil,
 					conditions = {
 						[1] = {
 							type = "quality",
@@ -67,8 +68,8 @@ local dbDefaults = {
 						-- the following conditions are not implemented yet, and only a hint for me
 						-- dungeon = 309, -- condition work only in ZG
 						-- inGroupWith = {
-						--		oneOf = {"Player1","Player2","Player3"},
-						--		allOf = {"Player1","Player2","Player3"},
+						--		"oneOf", "Player1,Player2,Player3",
+						--		"allOf", "Player1,Player2,Player3",
 						-- }, 
 						-- perhaps i add a lua solution to, we will see
 					},
