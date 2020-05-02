@@ -3,6 +3,8 @@ local FdHrT = FdHrT
 
 AutoRoll.Roll = {} --
 
+local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
+local conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
 
 
 --wow api, tis will do a lot other addons, i'm not sure is it local a lot faster?
@@ -129,6 +131,7 @@ function AutoRoll:GetRollIdDataDebug(rollid)
 	return itemInfo
 end
 
+-- /run AutoRoll:troll(1)
 -- /run AutoRoll:troll(1,1234)
 -- Debug function to emulate a roll windows event
 function AutoRoll:troll(rollId, itemId)
@@ -169,9 +172,39 @@ end
 function AutoRoll:CheckCondition(itemInfo, condition)
 	if condition.type == "item" then 
 		return tContains({strsplit(",",condition.args[1])},tostring(itemInfo.itemId))
+	elseif condition.type == "disabled" then 
+		return true
+	elseif condition.type == "lua" then 
+		return true
+	elseif condition.type == "party_member" then
+		for i,playerName in ipairs({strsplit(",",condition.args[2])}) do
+			if UnitInRaid(playerName) or UnitInParty(playerName) then
+				if condition.args[1] == "oneOf" then
+					return true
+				end
+			else
+				if condition.args[1] == "allOf" then
+					return false
+				end
+			end
+		end
+		if condition.args[1] == "oneOf" then
+			return false
+		else
+			return true
+		end
+	elseif condition.type == "dungeon" then 
+		local instanceId = select(8,GetInstanceInfo())
+		return instanceId == condition.args[1]
+	elseif condition.type == "quality" then 
+		-- Validate bevore use loadstring
+		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then return false end
+		 
+		local f = assert(loadstring("return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2]))
+		return f()
 	end
 
-	return true --condition type not known, ignore it
+	return true -- Condition type not known, ignore it
 end
 
 function AutoRoll:findGroup(itemInfo, itemGroups)

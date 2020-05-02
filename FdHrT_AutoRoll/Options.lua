@@ -6,9 +6,38 @@ local FdHrT = FdHrT
 local conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
 local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
-local dungeonList = {[697]="Zul'Gurub",[718]="Ony", [696]="MC", [755]="BWL"}
+local dungeonList = {[309]="Zul'Gurub",[249]="Ony", [409]="MC", [469]="BWL", [389]="test instance"}
 
-local conditionOperaters = {["="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
+
+-- 48	Blackfathom Deeps
+-- 230	Blackrock Depths
+-- 229	Blackrock Spire
+-- 429	Dire Maul
+-- 90	Gnomeregan
+-- 349	Maraudon
+-- 389	Ragefire Chasm
+-- 129	Razorfen Downs
+-- 47	Razorfen Kraul
+-- 1001	Scarlet Halls
+-- 1004	Scarlet Monastery
+-- 1007	Scholomance
+-- 33	Shadowfang Keep
+-- 329	Stratholme
+-- 36	The Deadmines
+-- 34	The Stockade
+-- 109	The Temple of Atal'Hakkar
+-- 70	Uldaman
+-- 43	Wailing Caverns
+-- 209	Zul'Farrak
+-- 309	Zul'Gurub
+
+-- 469	Blackwing Lair
+-- 409	Molten Core
+-- 509	Ruins of Ahn'Qiraj
+-- 531	Temple of Ahn'Qira
+
+
+local conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
 
 function AutoRoll:GetOptions()
 	return { 
