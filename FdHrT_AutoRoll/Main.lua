@@ -91,9 +91,6 @@ function AutoRoll:OnInitialize()
     -- Called when the addon is loaded
 end
 
-
-
-
 function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
@@ -112,7 +109,7 @@ function AutoRoll:GetRollIdData(rollid)
 	local itemInfo = {["rollid"] = rollid}
 	itemInfo.texture, itemInfo.name, itemInfo.count, itemInfo.quality, itemInfo.bindOnPickUp, itemInfo.canNeed, itemInfo.canGreed, itemInfo.canDisenchant, itemInfo.reasonNeed, itemInfo.reasonGreed, itemInfo.reasonDisenchant, itemInfo.deSkillRequired = GetLootRollItemInfo(rollid);
 	print(itemInfo.name..itemInfo.quality);
-	itemInfo.itemID, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollid));
+	itemInfo.itemId, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollid));
 
 	itemInfo.itemLink = GetLootRollItemLink(itemInfo.rollid)
 
@@ -125,18 +122,18 @@ function AutoRoll:GetRollIdDataDebug(rollid)
 		name = "test item",
 		count = 1,
 		quality = 3,
-		itemID = 19698,
+		itemId = 19698,
 
 
 	}
 	return itemInfo
 end
 
--- /run AutoRoll:troll(1)
+-- /run AutoRoll:troll(1,1234)
 -- Debug function to emulate a roll windows event
-function AutoRoll:troll(rollId,itemId)
+function AutoRoll:troll(rollId, itemId)
 	local itemInfo = self:GetRollIdDataDebug(rollid);
-	if itemId ~= nil then itemInfo.itemId = itemId end
+	if itemId then itemInfo.itemId = itemId end
 	self:CheckRoll(itemInfo)
 end
 
@@ -146,8 +143,6 @@ function AutoRoll:START_LOOT_ROLL(event, rollid)
 end
 
 function AutoRoll:CheckRoll(itemInfo)
-	self:Print("Prüffe Item. Id:"..itemInfo.itemID.." Name:"..itemInfo.name)
-	
 	local itemGroups = self.db.itemGroups;
 
 	local groupId = AutoRoll:findGroup(itemInfo,itemGroups);
@@ -160,25 +155,20 @@ end
 function AutoRoll:CheckConditions(itemInfo, itemGroup)
 	if itemGroup.conditions == nil then return false end
 
+	-- Check all Conditions
 	for ic, condition in pairs(itemGroup.conditions) do
 		if AutoRoll:CheckCondition(itemInfo, condition) == false then
 			-- Condition fails try next itemGroup
 			return false
 		end
 	end
-	
+	-- All Conditions true, une this itemGroup
 	return true
 end
 
 function AutoRoll:CheckCondition(itemInfo, condition)
-
 	if condition.type == "item" then 
-
-		self:Print("Items check: "..condition.args[1])
-		local test = {strsplit(",",condition.args[1])}
-		self:Print("erste id vom string: "..test[1])
-		if tContains(test,tostring(itemInfo.itemID)) == false then self:Print("Item ID nicht gefunden") end
-		return tContains({strsplit(",",condition.args[1])},tostring(itemInfo.itemID))
+		return tContains({strsplit(",",condition.args[1])},tostring(itemInfo.itemId))
 	end
 
 	return true --condition type not known, ignore it
@@ -186,9 +176,9 @@ end
 
 function AutoRoll:findGroup(itemInfo, itemGroups)
 	if itemGroups == nil then return nil end
+
 	for i, itemGroup in pairs(itemGroups) do
 		if itemGroup.enabled == false then break end
-		self:Print("check: "..itemGroup.description)
 
 		if self:CheckConditions(itemInfo, itemGroup) then 
 			return i 
