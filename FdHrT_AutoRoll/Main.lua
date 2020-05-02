@@ -1,6 +1,10 @@
 AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
 local FdHrT = FdHrT
 
+AutoRoll.Roll = {} --
+
+
+
 --wow api, tis will do a lot other addons, i'm not sure is it local a lot faster?
 local GetLootRollItemInfo = GetLootRollItemInfo
 local GetLootRollItemLink = GetLootRollItemLink
@@ -19,7 +23,8 @@ local dbDefaults = {
 
 			savedItems = { -- it will be possible to remember the decision on the roll frame. this is stored here
 				--[19698] = 0,
-			},
+			}, 
+			itemGroupsRaid = {}, -- here are the groups stored you recive from raid lead
 			itemGroups = { -- When not stored in the savedItems it will check the items groups
 				{
 					description = "Grüne ZG Münzen im Raid gerecht aufteilen",
@@ -87,6 +92,8 @@ function AutoRoll:OnInitialize()
 end
 
 
+
+
 function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
@@ -97,40 +104,146 @@ function AutoRoll:OnEnable()
     local options = self:GetOptions();
     FdHrT:AddAddonOptions(options,"AutoRoll");
     --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
-
+ 
     init()
 end
 
+function AutoRoll:GetRollIdData(rollid)
+	local itemInfo = {["rollid"] = rollid}
+	itemInfo.texture, itemInfo.name, itemInfo.count, itemInfo.quality, itemInfo.bindOnPickUp, itemInfo.canNeed, itemInfo.canGreed, itemInfo.canDisenchant, itemInfo.reasonNeed, itemInfo.reasonGreed, itemInfo.reasonDisenchant, itemInfo.deSkillRequired = GetLootRollItemInfo(rollid);
+	print(itemInfo.name..itemInfo.quality);
+	itemInfo.itemID, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollid));
+
+	itemInfo.itemLink = GetLootRollItemLink(itemInfo.rollid)
+
+	return itemInfo
+end
+
+function AutoRoll:GetRollIdDataDebug(rollid)
+	local itemInfo = {
+		rollid = rollid,
+		name = "test item",
+		count = 1,
+		quality = 3,
+		itemID = 19698,
+
+
+	}
+	return itemInfo
+end
+
+-- /run AutoRoll:troll(1)
+-- Debug function to emulate a roll windows event
+function AutoRoll:troll(rollId,itemId)
+	local itemInfo = self:GetRollIdDataDebug(rollid);
+	if itemId ~= nil then itemInfo.itemId = itemId end
+	self:CheckRoll(itemInfo)
+end
+
 function AutoRoll:START_LOOT_ROLL(event, rollid)
-	local texture, name, count, quality, bindOnPickUp, canNeed, canGreed, canDisenchant, reasonNeed, reasonGreed, reasonDisenchant, deSkillRequired = GetLootRollItemInfo(rollid);
-	print(name..quality);
-	local itemID, itemType, itemSubType, itemEquipLoc, icon, itemClassID, itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(rollid));
+	local itemInfo = self:GetRollIdData(rollid);
+	self:CheckRoll(itemInfo)
+end
 
-	print(itemID.." "..name.. GetLootRollItemLink(rollid))
-	if (itemID > 19698 and itemID < 19706) or Round_Lood_All == 1 then
+function AutoRoll:CheckRoll(itemInfo)
+	self:Print("Prüffe Item. Id:"..itemInfo.itemID.." Name:"..itemInfo.name)
+	
+	local itemGroups = self.db.itemGroups;
 
-		rolls[rollid] = 1;
-		loot_counter = loot_counter +1;
-		party_member = GetNumGroupMembers();
-		print("vor würfeln. has_loot: "..has_loot)
-		if has_loot < 1 then
-			--würfeln
-			print("Würfle auf Item "..loot_counter.."/"..party_member);
-			RollOnLoot(rollid, 2);
-		else
-			print("Passe auf Item "..loot_counter.."/"..party_member);
-			RollOnLoot(rollid, 0);
-		end
+	local groupId = AutoRoll:findGroup(itemInfo,itemGroups);
 
-		if party_member <= loot_counter then
-			loot_counter = 0;
-			has_loot = has_loot -1;
-			loot_round = loot_round +1;
-			print("Neue Runde, has_loot -1 "..has_loot);
-		end
-	elseif quality == 2 then
-		RollOnLoot(rollid, Crap_Roll_Stat);
+	if groupId then
+		self:Print("gefundene Gruppe: "..itemGroups[groupId].description)
 	end
+end
+
+function AutoRoll:CheckConditions(itemInfo, itemGroup)
+	if itemGroup.conditions == nil then return false end
+
+	for ic, condition in pairs(itemGroup.conditions) do
+		if AutoRoll:CheckCondition(itemInfo, condition) == false then
+			-- Condition fails try next itemGroup
+			return false
+		end
+	end
+	
+	return true
+end
+
+function AutoRoll:CheckCondition(itemInfo, condition)
+
+	if condition.type == "item" then 
+
+		self:Print("Items check: "..condition.args[1])
+		local test = {strsplit(",",condition.args[1])}
+		self:Print("erste id vom string: "..test[1])
+		if tContains(test,tostring(itemInfo.itemID)) == false then self:Print("Item ID nicht gefunden") end
+		return tContains({strsplit(",",condition.args[1])},tostring(itemInfo.itemID))
+	end
+
+	return true --condition type not known, ignore it
+end
+
+function AutoRoll:findGroup(itemInfo, itemGroups)
+	if itemGroups == nil then return nil end
+	for i, itemGroup in pairs(itemGroups) do
+		if itemGroup.enabled == false then break end
+		self:Print("check: "..itemGroup.description)
+
+		if self:CheckConditions(itemInfo, itemGroup) then 
+			return i 
+		end
+
+					-- conditions = {
+					-- 	[1] = {
+					-- 		type = "item",
+					-- 		args = {"19707,19708,19709,19710,19711,19712,19713,19714,19715"},
+					-- 	}
+					-- },
+					-- conditions = {
+					-- 	[1] = {
+					-- 		type = "quality",
+					-- 		args = {
+					-- 			"<=", 
+					-- 			3, --0 - Poor, 1 - Common, 2 - Uncommon, 3 - Rare, 4 - Epic, 5 - Legendary, 6 - Artifact, 7 - Heirloom, 8 - WoW Token
+					-- 		}, 
+					-- 	}
+						-- the following conditions are not implemented yet, and only a hint for me
+						-- dungeon = 309, -- condition work only in ZG
+						-- inGroupWith = {
+						--		"oneOf", "Player1,Player2,Player3",
+						--		"allOf", "Player1,Player2,Player3",
+						-- }, 
+
+
+	end
+
+
+
+	-- if (itemID > 19698 and itemID < 19706) or Round_Lood_All == 1 then
+
+	-- 	rolls[rollid] = 1;
+	-- 	loot_counter = loot_counter +1;
+	-- 	party_member = GetNumGroupMembers();
+	-- 	print("vor würfeln. has_loot: "..has_loot)
+	-- 	if has_loot < 1 then
+	-- 		--würfeln
+	-- 		print("Würfle auf Item "..loot_counter.."/"..party_member);
+	-- 		RollOnLoot(rollid, 2);
+	-- 	else
+	-- 		print("Passe auf Item "..loot_counter.."/"..party_member);
+	-- 		RollOnLoot(rollid, 0);
+	-- 	end
+
+	-- 	if party_member <= loot_counter then
+	-- 		loot_counter = 0;
+	-- 		has_loot = has_loot -1;
+	-- 		loot_round = loot_round +1;
+	-- 		print("Neue Runde, has_loot -1 "..has_loot);
+	-- 	end
+	-- elseif quality == 2 then
+	-- 	RollOnLoot(rollid, Crap_Roll_Stat);
+	-- end
 end
 
 function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
@@ -195,3 +308,5 @@ function AutoRoll:PrintStatus()
 	print("verteile alles: "..Round_Lood_All);
 	print("Für Müll wird automatisch "..rollOptions[Crap_Roll_Stat].." gewählt")
 end
+
+
