@@ -19,7 +19,7 @@ local dbDefaults = {
 	profile = {
 		AutoRoll = {
 			enabled = true, -- the addon self is enabled per default
-			raidItemGroupsEnabled = true, -- use a group config to auto roll in a raid from a guild leader
+			guildItemGroupsEnabled = true, -- use a group config to auto roll in a raid from a guild leader
 			savedItemsEnabled = true, -- add the options to store 
 			profileItemGroupsEnabled = false, -- on default it should not use any ItemGroups to auto roll.
 
@@ -146,14 +146,32 @@ function AutoRoll:START_LOOT_ROLL(event, rollid)
 end
 
 function AutoRoll:CheckRoll(itemInfo)
-	local itemGroups = self.db.itemGroups;
+	if self.db.enabled == false then return false end
+	local currentItemGroup
 
-	local groupId = AutoRoll:findGroup(itemInfo,itemGroups);
+	-- if raiditem then
+	-- 	if raidItemGroupsEnabled and self:isRaidItemGroup then
+	-- 		groupId = self:findGroup(itemInfo,self.db.itemGroupsRaid);
+	-- 		if groupId then currentItemGroup = self.db.itemGroupsRaid[groupId] end
+	-- 	end
+	-- else
+	self:Print("Prüfe itemGroups")
+		if self.db.profileItemGroupsEnabled then
+			self:Print("itemGroups aktiv")
+			groupId = self:findGroup(itemInfo,self.db.itemGroups);
+			if groupId then currentItemGroup = self.db.itemGroups[groupId] end
+		end
+	-- end
 
-	if groupId then
-		self:Print("gefundene Gruppe: "..itemGroups[groupId].description)
+	if currentItemGroup then
+		self:Print("gefundene Gruppe: "..currentItemGroup.description)
 	end
 end
+
+
+-- function AutoRoll:isRaidItemGroup()
+-- 	-- There are no dungeon session id, so i have to track self is it the same group
+-- end
 
 function AutoRoll:CheckConditions(itemInfo, itemGroup)
 	if itemGroup.conditions == nil then return false end
@@ -216,29 +234,6 @@ function AutoRoll:findGroup(itemInfo, itemGroups)
 		if self:CheckConditions(itemInfo, itemGroup) then 
 			return i 
 		end
-
-					-- conditions = {
-					-- 	[1] = {
-					-- 		type = "item",
-					-- 		args = {"19707,19708,19709,19710,19711,19712,19713,19714,19715"},
-					-- 	}
-					-- },
-					-- conditions = {
-					-- 	[1] = {
-					-- 		type = "quality",
-					-- 		args = {
-					-- 			"<=", 
-					-- 			3, --0 - Poor, 1 - Common, 2 - Uncommon, 3 - Rare, 4 - Epic, 5 - Legendary, 6 - Artifact, 7 - Heirloom, 8 - WoW Token
-					-- 		}, 
-					-- 	}
-						-- the following conditions are not implemented yet, and only a hint for me
-						-- dungeon = 309, -- condition work only in ZG
-						-- inGroupWith = {
-						--		"oneOf", "Player1,Player2,Player3",
-						--		"allOf", "Player1,Player2,Player3",
-						-- }, 
-
-
 	end
 
 

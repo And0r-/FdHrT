@@ -47,22 +47,61 @@ function AutoRoll:GetOptions()
   		childGroups = "tab",
   		args = {
 			settings = {
-				name = "Debug",
+				name = "Einstellungen",
 				type = "group",
-				order = 2,
+				order = 1,
 				args = self:GetOptionSettings(),
 		    },
 			itemGroups = {
-				name = "Regeln",
+				name = "Erweiterte Einstellungen",
 				type = "group",
-				order = 1,
+				order = 2,
 				args = self:GetOptionItemGroups(),
+		    },
+			debug = {
+				name = "Debug",
+				type = "group",
+				order = 3,
+				args = self:GetOptionDebug(),
 		    },
       	},
 	}
 end
 
 function AutoRoll:GetOptionSettings()
+	return { --profileItemGroupsEnabled
+		raidItemGroups = {
+			name = "Gildenleitung kann bestimmen was ich würfeln soll (kommt in Beta2)",
+			desc = "Wärend einem Raid kann die Gildenleitung meine eigenen Regeln überschreiben.",
+			type = "toggle",
+			order = 1,
+			get = "IsGuildItemGroupsEnabled",
+			set = "ToggleGuildItemGroupsEnabled",
+			width = "full",
+		},
+		saveRollOptionsEnabled = {
+			name = "Beim würfeln kann man angeben das nächste mal wieder das selbe zu wählen",
+			desc = "Past/würfelt das nächste mal beim selben item automatisch, wenn 'merken' im Würfelfenster aktiviert wird",
+			type = "toggle",
+			order = 2,
+			get = "IssavedItemsEnabled",
+			set = "TogglesavedItemsEnabled",
+			width = "full",
+		},
+		profileItemGroups = {
+			name = "Automatisches Würfeln verwenden (kommt in Beta3)",
+			desc = "Schaltet die definierten Regeln ein",
+			type = "toggle",
+			order = 3,
+			get = "IsProfileItemGroupsEnabled",
+			set = "ToggleProfileItemGroupsEnabled",
+			width = "full",
+		},
+
+	}
+end
+
+function AutoRoll:GetOptionDebug()
 	return {
 		status = {
 			name = "Status",
@@ -448,6 +487,32 @@ end
 function AutoRoll:ToggleItemGroupEnabled(info, value)
 	self.db.itemGroups[info.arg].enabled = value
 end
+
+function AutoRoll:IsProfileItemGroupsEnabled(info)
+	return self.db.profileItemGroupsEnabled
+end
+
+function AutoRoll:ToggleProfileItemGroupsEnabled(info, value)
+	self.db.profileItemGroupsEnabled = value
+end
+
+function AutoRoll:IsGuildItemGroupsEnabled(info)
+	return self.db.guildItemGroupsEnabled
+end
+
+function AutoRoll:ToggleGuildItemGroupsEnabled(info, value)
+	self.db.guildItemGroupsEnabled = value
+end
+
+function AutoRoll:IssavedItemsEnabled(info)
+	return self.db.savedItemsEnabled
+end
+
+function AutoRoll:TogglesavedItemsEnabled(info, value)
+	self.db.savedItemsEnabled = value
+end
+
+
 
 function AutoRoll:IsItemGroupShareEnabled(info)
 	if self.db.itemGroups[info.arg].share == nil then
