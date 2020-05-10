@@ -1,8 +1,9 @@
 AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
 local FdHrT = FdHrT
 
-AutoRoll.Roll = {} --
-
+AutoRoll.sharedata = {} --
+-- @todo:  save this in AutoRoll, to not have dublications...
+local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
 local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
 local conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
 
@@ -18,6 +19,8 @@ local GetPlayerInfo = C_LootHistory.GetPlayerInfo
 local dbDefaults = {
 	profile = {
 		AutoRoll = {
+			rolls = {}, -- data about current rolls with share function, when this rollId is finished we have to check do we have won the item. and update the itemgroup share data. rolls[rollId] = itemGroupId
+			share = {}, -- round robin data of all groups. e.g: share[itemGroupId].loot_counter 
 			enabled = true, -- the addon self is enabled per default
 			guildItemGroupsEnabled = true, -- use a group config to auto roll in a raid from a guild leader
 			savedItemsEnabled = true, -- add the options to store 
@@ -103,24 +106,23 @@ function AutoRoll:OnEnable()
     local options = self:GetOptions();
     FdHrT:AddAddonOptions(options,"AutoRoll");
     --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
- 
-    init()
+
 end
 
-function AutoRoll:GetRollIdData(rollid)
-	local itemInfo = {["rollid"] = rollid}
-	itemInfo.texture, itemInfo.name, itemInfo.count, itemInfo.quality, itemInfo.bindOnPickUp, itemInfo.canNeed, itemInfo.canGreed, itemInfo.canDisenchant, itemInfo.reasonNeed, itemInfo.reasonGreed, itemInfo.reasonDisenchant, itemInfo.deSkillRequired = GetLootRollItemInfo(rollid);
+function AutoRoll:GetRollIdData(rollId)
+	local itemInfo = {["rollId"] = rollId}
+	itemInfo.texture, itemInfo.name, itemInfo.count, itemInfo.quality, itemInfo.bindOnPickUp, itemInfo.canNeed, itemInfo.canGreed, itemInfo.canDisenchant, itemInfo.reasonNeed, itemInfo.reasonGreed, itemInfo.reasonDisenchant, itemInfo.deSkillRequired = GetLootRollItemInfo(rollId);
 	print(itemInfo.name..itemInfo.quality);
-	itemInfo.itemId, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollid));
+	itemInfo.itemId, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollId));
 
-	itemInfo.itemLink = GetLootRollItemLink(itemInfo.rollid)
+	itemInfo.itemLink = GetLootRollItemLink(itemInfo.rollId)
 
 	return itemInfo
 end
 
-function AutoRoll:GetRollIdDataDebug(rollid)
+function AutoRoll:GetRollIdDataDebug(rollId)
 	local itemInfo = {
-		rollid = rollid,
+		rollId = rollId,
 		name = "test item",
 		count = 1,
 		quality = 3,
@@ -135,37 +137,52 @@ end
 -- /run AutoRoll:troll(1,1234)
 -- Debug function to emulate a roll windows event
 function AutoRoll:troll(rollId, itemId)
-	local itemInfo = self:GetRollIdDataDebug(rollid);
+	self:Print("rollId ist: "..rollId)
+	local itemInfo = self:GetRollIdDataDebug(rollId);
 	if itemId then itemInfo.itemId = itemId end
 	self:CheckRoll(itemInfo)
 end
 
-function AutoRoll:START_LOOT_ROLL(event, rollid)
-	local itemInfo = self:GetRollIdData(rollid);
+function AutoRoll:START_LOOT_ROLL(event, rollId)
+	local itemInfo = self:GetRollIdData(rollId);
 	self:CheckRoll(itemInfo)
 end
 
 function AutoRoll:CheckRoll(itemInfo)
 	if self.db.enabled == false then return false end
-	local currentItemGroup
+	local currentItemGroupId
 
 	-- if raiditem then
 	-- 	if raidItemGroupsEnabled and self:isRaidItemGroup then
-	-- 		groupId = self:findGroup(itemInfo,self.db.itemGroupsRaid);
-	-- 		if groupId then currentItemGroup = self.db.itemGroupsRaid[groupId] end
+	-- 		currentItemGroupId = self:findGroup(itemInfo,self.db.itemGroupsRaid);
+	-- 		if currentItemGroupId then currentItemGroup = self.db.itemGroupsRaid[currentItemGroupId] end
 	-- 	end
 	-- else
-	self:Print("Prüfe itemGroups")
 		if self.db.profileItemGroupsEnabled then
-			self:Print("itemGroups aktiv")
-			groupId = self:findGroup(itemInfo,self.db.itemGroups);
-			if groupId then currentItemGroup = self.db.itemGroups[groupId] end
+			currentItemGroupId = self:findGroup(itemInfo,self.db.itemGroups);
 		end
 	-- end
+
+	-- no active itemGroup found for this roll window, abort
+	if currentItemGroupId == nil then return false end
+
+	local currentItemGroup = self.db.itemGroups[currentItemGroupId]
 
 	if currentItemGroup then
 		self:Print("gefundene Gruppe: "..currentItemGroup.description)
 	end
+
+
+	if currentItemGroup.share then
+
+		self:Print("checke round robin für rollId: "..itemInfo.rollId)
+		-- round robin mode. only roll when player not have more then the other from currentItemGroupId.
+		self:CheckShare(itemInfo.rollId, currentItemGroupId, currentItemGroup)
+	else
+		-- auto roll
+		self:Print("auto roll: ".. rollOptions[currentItemGroup.rollOptionSuccsess])
+	end
+
 end
 
 
@@ -215,7 +232,7 @@ function AutoRoll:CheckCondition(itemInfo, condition)
 		local instanceId = select(8,GetInstanceInfo())
 		return instanceId == condition.args[1]
 	elseif condition.type == "quality" then 
-		-- Validate bevore use loadstring
+		-- Validate bevore use the evel loadstring function...
 		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then return false end
 		 
 		local f = assert(loadstring("return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2]))
@@ -226,7 +243,7 @@ function AutoRoll:CheckCondition(itemInfo, condition)
 end
 
 function AutoRoll:findGroup(itemInfo, itemGroups)
-	if itemGroups == nil then return nil end
+	if itemGroups == nil then return nil end -- no itemGroups created
 
 	for i, itemGroup in pairs(itemGroups) do
 		if itemGroup.enabled == false then break end
@@ -235,52 +252,64 @@ function AutoRoll:findGroup(itemInfo, itemGroups)
 			return i 
 		end
 	end
+	return nil
 
 
 
-	-- if (itemID > 19698 and itemID < 19706) or Round_Lood_All == 1 then
 
-	-- 	rolls[rollid] = 1;
-	-- 	loot_counter = loot_counter +1;
-	-- 	party_member = GetNumGroupMembers();
-	-- 	print("vor würfeln. has_loot: "..has_loot)
-	-- 	if has_loot < 1 then
-	-- 		--würfeln
-	-- 		print("Würfle auf Item "..loot_counter.."/"..party_member);
-	-- 		RollOnLoot(rollid, 2);
-	-- 	else
-	-- 		print("Passe auf Item "..loot_counter.."/"..party_member);
-	-- 		RollOnLoot(rollid, 0);
-	-- 	end
+end
 
-	-- 	if party_member <= loot_counter then
-	-- 		loot_counter = 0;
-	-- 		has_loot = has_loot -1;
-	-- 		loot_round = loot_round +1;
-	-- 		print("Neue Runde, has_loot -1 "..has_loot);
-	-- 	end
-	-- elseif quality == 2 then
-	-- 	RollOnLoot(rollid, Crap_Roll_Stat);
-	-- end
+-- a little bit messy at the moment, 
+function AutoRoll:CheckShare(rollId, currentItemGroupId)
+	 self.db.rolls[rollId] = currentItemGroupId;
+	 if self.db.share[currentItemGroupId] == nil then self:initShare(currentItemGroupId) end
+ 	local sharedata = self.db.share[currentItemGroupId];
+
+	sharedata.loot_counter = sharedata.loot_counter +1;
+	local party_member = GetNumGroupMembers(); -- it is possible that one of the group do not want any zg coins. so we need a option later to change the party_member size by hand...
+--		print("vor würfeln. has_loot: "..has_loot)
+	if sharedata.has_loot < 1 then
+		--würfeln
+		print("Würfle auf Item drops:"..sharedata.loot_counter.." spieler anz:"..party_member);
+		RollOnLoot(rollId, 2);
+	else
+		print("Passe auf Items, da ich schon eins habe. drops:"..sharedata.loot_counter.." spieler anz:"..party_member);
+		RollOnLoot(rollId, 0);
+	end
+
+	if party_member <= sharedata.loot_counter then
+		sharedata.loot_counter = 0;
+		sharedata.has_loot = sharedata.has_loot -1;
+		sharedata.loot_round = sharedata.loot_round +1;
+		print("Neue Runde, has_loot -1 "..sharedata.has_loot);
+	end
+end
+
+function AutoRoll:initShare(currentItemGroupId)
+	self.db.share[currentItemGroupId] = {
+		loot_counter = 0,
+		has_loot = 0,
+		loot_round = 1,
+	}
 end
 
 function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
-	local hid, rollid, players, done, _ = 1;
+	local hid, rollId, players, done, _ = 1;
 	print("roll complete detect");
 
 	while true do
 		print("get item history "..hid)
-		rollid, _, players, done = C_LootHistory.GetItem(hid);
-		if not rollid then
+		rollId, _, players, done = C_LootHistory.GetItem(hid);
+		if not rollId then
 			return
-		elseif done and rolls[rollid] == 1 then
-			print(rollid.." abgeschlossen ");
+		elseif done and rolls[rollId] == 1 then
+			print(rollId.." abgeschlossen ");
 			break
 		end
 		hid = hid+1
 	end
 
-	rolls[rollid] = 2
+	rolls[rollId] = 2
 
 	for j=1, players do
 		print("check winner char: "..j);
@@ -298,33 +327,30 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 	end
 end
 
-
-
-function init()
-	if loot_counter == nil then
-		AutoRoll:ResetFearLoot();
-		Round_Lood_All = 0;
-		Crap_Roll_Stat = 0;
+function AutoRoll:ResetShare(itemGroupId)
+	if itemGroupId then
+		-- reset share loot from this itemGroupId
+		self.db.share[itemGroupId] = {}
+	else
+		-- reset all share loots!
+		self.db.share = {}
 	end
 end
 
+function AutoRoll:PrintShareStatus(itemGroupId)
+	local sharedata = self.db.share[currentItemGroupId]
 
-function AutoRoll:ResetFearLoot()
-	rolls = {};
-	party_member = 20;
-	loot_counter = 0;
-	has_loot = 0;
-	loot_round = 1;
-	has_won = 0;
+	self:Print(self.db.itemGroups[itemGroupId].description)
+	self:Print(sharedata.loot_counter.."/"..sharedata.party_member);
+	self:Print("has_loot: "..sharedata.has_loot);
+	self:Print("runde: "..sharedata.loot_round);
+	self:Print("has_won: "..sharedata.has_won);
 end
 
-function AutoRoll:PrintStatus()
-	print(loot_counter.."/"..party_member);
-	print("has_loot: "..has_loot);
-	print("runde: "..loot_round);
-	print("has_won: "..has_won);
-	print("verteile alles: "..Round_Lood_All);
-	print("Für Müll wird automatisch "..rollOptions[Crap_Roll_Stat].." gewählt")
+function AutoRoll:PrintAllShareStatus()
+	for i in ipairs(self.db.share) do
+		self:PrintShareStatus(i)
+	end
 end
 
 

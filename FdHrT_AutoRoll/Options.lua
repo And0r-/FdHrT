@@ -108,14 +108,14 @@ function AutoRoll:GetOptionDebug()
 			desc = "Zeige informationen über die share itemvergabe",
 			type = "execute",
 			order = 2,
-			func = "PrintStatus",
+			func = "PrintAllShareStatus",
 		},
 		reset = {
 			name = "Reset",
 			desc = "Setzt die gleichmässige itemvergabe zurück",
 			type = "execute",
 			order = 3,
-			func = "ResetFearLoot",
+			func = "ResetShare",
 		},
 		nl2 = {
 			type = "header",
@@ -408,16 +408,6 @@ end
 
 function AutoRoll:SetConditionArg(info, value)
 	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]] = value
-end
-
-function AutoRoll:GetCrapRollStat(info)
-	self:Print(info.arg)
-	return Crap_Roll_Stat
-end
-
-function AutoRoll:SetCrapRollStat(info, value)
-	self:Print("setze Status auf: "..rollOptions[value])
-	Crap_Roll_Stat = value
 end
 
 function AutoRoll:IsDebug(info)
