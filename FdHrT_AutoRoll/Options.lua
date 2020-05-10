@@ -520,3 +520,35 @@ function AutoRoll:ToggleItemGroupShareEnabled(info, value)
 end
 
  
+ function AutoRoll:ResetShare(info)
+	if info.arg then
+		-- reset share loot from this itemGroupId
+		self:Print("Resette share von itemGroup: ".. info.arg)
+		self.db.share[info.arg] = {}
+	else
+		-- reset all share loots!
+		self:Print("Resette alle share daten")
+		self.db.share = {}
+	end
+end
+
+function AutoRoll:PrintShareStatus(info)
+	local sharedata = self.db.share[info.arg]
+
+	self:Print(self.db.itemGroups[info.arg].description)
+	self:Print("Drops in dieser Runde: "..sharedata.loot_counter)
+	self:Print("Spieler anz: "..sharedata.party_member);
+	if sharedata.has_loot == 1 then
+		self:Print("Habe bereits mein/e Items erhalten, passe auf das nächste.")
+	else
+		self:Print("Habe noch anrecht auf "..(sharedata.has_loot*-1)+1 .." item/s, würfle auf das nächste")
+	end
+	self:Print("Runde: "..sharedata.loot_round);
+	self:Print("Total gewonnen: "..sharedata.has_won_total);
+end
+
+function AutoRoll:PrintAllShareStatus(info)
+	for i in ipairs(self.db.share) do
+		self:PrintShareStatus({["arg"]=i})
+	end
+end

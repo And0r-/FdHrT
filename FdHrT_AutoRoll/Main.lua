@@ -100,7 +100,7 @@ function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
     self:RegisterEvent("START_LOOT_ROLL")
-    self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
+    self:RegisterEvent("LOOT_ITEM_ROLL_WON")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
     self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
     local options = self:GetOptions();
@@ -134,6 +134,7 @@ function AutoRoll:GetRollIdDataDebug(rollId)
 end
 
 -- /run AutoRoll:troll(1)
+-- /run AutoRoll:rollItemWon(1)
 -- /run AutoRoll:troll(1,1234)
 -- Debug function to emulate a roll windows event
 function AutoRoll:troll(rollId, itemId)
@@ -261,23 +262,23 @@ end
 
 -- a little bit messy at the moment, 
 function AutoRoll:CheckShare(rollId, currentItemGroupId)
-	 self.db.rolls[rollId] = currentItemGroupId;
-	 if self.db.share[currentItemGroupId] == nil then self:initShare(currentItemGroupId) end
+	self.db.rolls[rollId] = currentItemGroupId;
+	if self.db.share[currentItemGroupId] == nil then self:initShare(currentItemGroupId) end
  	local sharedata = self.db.share[currentItemGroupId];
 
 	sharedata.loot_counter = sharedata.loot_counter +1;
-	local party_member = GetNumGroupMembers(); -- it is possible that one of the group do not want any zg coins. so we need a option later to change the party_member size by hand...
+	sharedata.party_member = GetNumGroupMembers(); -- it is possible that one of the group do not want any zg coins. so we need a option later to change the party_member size by hand...
 --		print("vor würfeln. has_loot: "..has_loot)
 	if sharedata.has_loot < 1 then
 		--würfeln
-		print("Würfle auf Item drops:"..sharedata.loot_counter.." spieler anz:"..party_member);
+		print("Würfle auf Item drops:"..sharedata.loot_counter.." spieler anz:"..sharedata.party_member);
 		RollOnLoot(rollId, 2);
 	else
-		print("Passe auf Items, da ich schon eins habe. drops:"..sharedata.loot_counter.." spieler anz:"..party_member);
+		print("Passe auf Items, da ich schon eins habe. drops:"..sharedata.loot_counter.." spieler anz:"..sharedata.party_member);
 		RollOnLoot(rollId, 0);
 	end
 
-	if party_member <= sharedata.loot_counter then
+	if sharedata.party_member <= sharedata.loot_counter then
 		sharedata.loot_counter = 0;
 		sharedata.has_loot = sharedata.has_loot -1;
 		sharedata.loot_round = sharedata.loot_round +1;
@@ -290,67 +291,62 @@ function AutoRoll:initShare(currentItemGroupId)
 		loot_counter = 0,
 		has_loot = 0,
 		loot_round = 1,
+		has_won_total = 0,
 	}
 end
 
-function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
-	local hid, rollId, players, done, _ = 1;
-	print("roll complete detect");
+function AutoRoll:LOOT_ITEM_ROLL_WON(event, itemLink, rollQuntity, rollType, rollId, upgraded)
+	self:rollItemWon(rollId)
+end
 
-	while true do
-		print("get item history "..hid)
-		rollId, _, players, done = C_LootHistory.GetItem(hid);
-		if not rollId then
-			return
-		elseif done and rolls[rollId] == 1 then
-			print(rollId.." abgeschlossen ");
-			break
-		end
-		hid = hid+1
-	end
-
-	rolls[rollId] = 2
-
-	for j=1, players do
-		print("check winner char: "..j);
-		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
-		-- roll = roll and roll or true
-		if is_winner then
-			print("gewinner von ".._.." ist: "..name.." class: "..class);
-			if is_me then
-				has_loot = has_loot +1;
-				has_won = has_won +1;
-				print("ich hab gewonnen has_loot +1 "..has_loot);
-			end
-			break
-		end
+-- /run AutoRoll:rollItemWon(1)
+function AutoRoll:rollItemWon(rollId)
+	if self.db.rolls[rollId] then
+		local sharedata = self.db.share[self.db.rolls[rollId]]
+		sharedata.has_loot = sharedata.has_loot +1;
+		sharedata.has_won_total = sharedata.has_won_total +1;
+		print("ich hab gewonnen has_loot +1 "..sharedata.has_loot);
 	end
 end
 
-function AutoRoll:ResetShare(itemGroupId)
-	if itemGroupId then
-		-- reset share loot from this itemGroupId
-		self.db.share[itemGroupId] = {}
-	else
-		-- reset all share loots!
-		self.db.share = {}
-	end
-end
+--	LOOT_HISTORY_ROLL_COMPLETE is very complex i have to work with the complete roll history from wow. 
+--  At the moment i use only the info is the winner is me. This will be a lot easyser with LOOT_ITEM_ROLL_WON.
+--  When I will track all winners this function should work:
+--
+-- function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
+-- 	local hid, rollId, players, done, _ = 1;
+-- 	print("roll complete detect");
 
-function AutoRoll:PrintShareStatus(itemGroupId)
-	local sharedata = self.db.share[currentItemGroupId]
+-- 	-- Any roll is done now. so loop over all the wow lootHistory data and check is ther a entry for a open rollid...
+-- 	while true do
+-- 		rollId, _, players, done = C_LootHistory.GetItem(hid);
+-- 		if not rollId then
+-- 			return
+-- 		elseif done and self.db.rolls[rollId] then
+-- 			-- found it...
+-- 			print(rollId.." abgeschlossen ");
+-- 			break
+-- 		end
+-- 		hid = hid+1
+-- 	end
 
-	self:Print(self.db.itemGroups[itemGroupId].description)
-	self:Print(sharedata.loot_counter.."/"..sharedata.party_member);
-	self:Print("has_loot: "..sharedata.has_loot);
-	self:Print("runde: "..sharedata.loot_round);
-	self:Print("has_won: "..sharedata.has_won);
-end
+-- 	-- There is no function to get the winner of the item. i have to loop over all players and get a lot of data about the history id of this player 
+-- 	for j=1, players do
+-- 		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
+-- 		if is_winner then
+-- 			print("gewinner von ".._.." ist: "..name.." class: "..class);
+-- 			if is_me then
+-- 				self.db.share[self.db.rolls[rollId]].has_loot = has_loot +1;
+-- 				has_won_total = has_won_total +1;
+-- 				print("ich hab gewonnen has_loot +1 "..has_loot);
+-- 			end
+-- 			break
+-- 		end
+-- 	end
 
-function AutoRoll:PrintAllShareStatus()
-	for i in ipairs(self.db.share) do
-		self:PrintShareStatus(i)
-	end
-end
+-- 	self.db.rolls[rollId] = nil -- ignore this rollId in the history data next time
+-- end
+
+
 
 
