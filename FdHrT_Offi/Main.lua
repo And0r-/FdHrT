@@ -63,7 +63,6 @@ function FdHrTO:OnEnable()
 end
 
 function FdHrTO:RAID_TARGET_UPDATE()
-	print("Raid_Update. convert:"..convert_to_raid)
     if convert_to_raid == 1 then
         ConvertToRaid();
         convert_to_raid = 0;
