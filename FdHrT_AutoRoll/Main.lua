@@ -100,7 +100,7 @@ function AutoRoll:OnEnable()
     -- Called when the addon is enabled
     self:Print("geladen")
     self:RegisterEvent("START_LOOT_ROLL")
-    self:RegisterEvent("LOOT_ITEM_ROLL_WON")
+    self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
     self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
     local options = self:GetOptions();
@@ -145,6 +145,7 @@ function AutoRoll:troll(rollId, itemId)
 end
 
 function AutoRoll:START_LOOT_ROLL(event, rollId)
+	self:Print("Loot zum würfeln rollId"..rollId)
 	local itemInfo = self:GetRollIdData(rollId);
 	self:CheckRoll(itemInfo)
 end
@@ -165,7 +166,7 @@ function AutoRoll:CheckRoll(itemInfo)
 	-- end
 
 	-- no active itemGroup found for this roll window, abort
-	if currentItemGroupId == nil then return false end
+	if currentItemGroupId == nil then self:Print("Gruppe nicht gefunden"); return false end
 
 	local currentItemGroup = self.db.itemGroups[currentItemGroupId]
 
@@ -234,7 +235,8 @@ function AutoRoll:CheckCondition(itemInfo, condition)
 		return instanceId == condition.args[1]
 	elseif condition.type == "quality" then 
 		-- Validate bevore use the evel loadstring function...
-		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then return false end
+		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then self:Print("Fataler error im AutoRoll, quality parameter ungültig") return false end
+		self:Print("loadstring: ".."return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2])
 		 
 		local f = assert(loadstring("return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2]))
 		return f()
@@ -295,9 +297,12 @@ function AutoRoll:initShare(currentItemGroupId)
 	}
 end
 
-function AutoRoll:LOOT_ITEM_ROLL_WON(event, itemLink, rollQuntity, rollType, rollId, upgraded)
-	self:rollItemWon(rollId)
-end
+-- -- This stupid event do not return the rollId! 
+-- -- so i will not store the item id to check it here... perhaps i will change my mind later
+-- function AutoRoll:LOOT_ITEM_ROLL_WON(event, itemLink, rollQuntity, rollType, roll, upgraded)
+-- 	self:Print("LOOT_ITEM_ROLL_WON entdeckt. item von rollid: "..rollId.." gewonnen")
+-- 	self:rollItemWon(rollId)
+-- end
 
 -- /run AutoRoll:rollItemWon(1)
 function AutoRoll:rollItemWon(rollId)
@@ -312,40 +317,38 @@ end
 --	LOOT_HISTORY_ROLL_COMPLETE is very complex i have to work with the complete roll history from wow. 
 --  At the moment i use only the info is the winner is me. This will be a lot easyser with LOOT_ITEM_ROLL_WON.
 --  When I will track all winners this function should work:
---
--- function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
--- 	local hid, rollId, players, done, _ = 1;
--- 	print("roll complete detect");
 
--- 	-- Any roll is done now. so loop over all the wow lootHistory data and check is ther a entry for a open rollid...
--- 	while true do
--- 		rollId, _, players, done = C_LootHistory.GetItem(hid);
--- 		if not rollId then
--- 			return
--- 		elseif done and self.db.rolls[rollId] then
--- 			-- found it...
--- 			print(rollId.." abgeschlossen ");
--- 			break
--- 		end
--- 		hid = hid+1
--- 	end
+function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
+	local hid, rollId, players, done, _ = 1;
+	print("roll complete detect");
 
--- 	-- There is no function to get the winner of the item. i have to loop over all players and get a lot of data about the history id of this player 
--- 	for j=1, players do
--- 		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
--- 		if is_winner then
--- 			print("gewinner von ".._.." ist: "..name.." class: "..class);
--- 			if is_me then
--- 				self.db.share[self.db.rolls[rollId]].has_loot = has_loot +1;
--- 				has_won_total = has_won_total +1;
--- 				print("ich hab gewonnen has_loot +1 "..has_loot);
--- 			end
--- 			break
--- 		end
--- 	end
+	-- Any roll is done now. so loop over all the wow lootHistory data and check is ther a entry for a open rollid...
+	while true do
+		rollId, _, players, done = C_LootHistory.GetItem(hid);
+		if not rollId then
+			return
+		elseif done and self.db.rolls[rollId] then
+			-- found it...
+			print(rollId.." abgeschlossen ");
+			break
+		end
+		hid = hid+1
+	end
 
--- 	self.db.rolls[rollId] = nil -- ignore this rollId in the history data next time
--- end
+	-- There is no function to get the winner of the item. i have to loop over all players and get a lot of data about the history id of this player 
+	for j=1, players do
+		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
+		if is_winner then
+			print("gewinner von ".._.." ist: "..name.." class: "..class);
+			if is_me then
+				self:rollItemWon(rollId)
+			end
+			break
+		end
+	end
+
+	self.db.rolls[rollId] = nil -- ignore this rollId in the history data next time
+end
 
 
 

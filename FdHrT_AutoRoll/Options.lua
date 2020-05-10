@@ -431,7 +431,7 @@ function AutoRoll:AddConditionOption(info)
 end
 
 function AutoRoll:AddItemGroupOption(info)
-	tinsert(self.db.itemGroups, {description = "Neue Gruppe", conditions = {}});
+	tinsert(self.db.itemGroups, {description = "Neue Gruppe", conditions = {}, share = {}});
 
 	options = self:GetOptions();
     FdHrT:AddAddonOptions(options,"AutoRoll");
@@ -548,7 +548,9 @@ function AutoRoll:PrintShareStatus(info)
 end
 
 function AutoRoll:PrintAllShareStatus(info)
-	for i in ipairs(self.db.share) do
+	self:Print("Zeige alle statuse für share an...")
+	for i in pairs(self.db.share) do
+		self:Print("status von itemGroup ".. i .. ":")
 		self:PrintShareStatus({["arg"]=i})
 	end
 end
