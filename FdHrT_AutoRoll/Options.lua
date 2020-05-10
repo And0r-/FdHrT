@@ -89,7 +89,7 @@ function AutoRoll:GetOptionSettings()
 			width = "full",
 		},
 		profileItemGroups = {
-			name = "Automatisches Würfeln verwenden (kommt in Beta3)",
+			name = "Würfelregeln Einschalten",
 			desc = "Schaltet die definierten Regeln ein",
 			type = "toggle",
 			order = 3,
@@ -97,6 +97,7 @@ function AutoRoll:GetOptionSettings()
 			set = "ToggleProfileItemGroupsEnabled",
 			width = "full",
 		},
+		-- show a short enable disable list for the itemGroups when enabled. disable advanced tab when not enabled.
 
 	}
 end
@@ -537,7 +538,7 @@ function AutoRoll:PrintShareStatus(info)
 
 	self:Print(self.db.itemGroups[info.arg].description)
 	self:Print("Drops in dieser Runde: "..sharedata.loot_counter)
-	self:Print("Spieler anz: "..sharedata.party_member);
+	self:Print("Spieler in Gruppe: "..sharedata.party_member);
 	if sharedata.has_loot == 1 then
 		self:Print("Habe bereits mein/e Items erhalten, passe auf das nächste.")
 	else
@@ -548,9 +549,7 @@ function AutoRoll:PrintShareStatus(info)
 end
 
 function AutoRoll:PrintAllShareStatus(info)
-	self:Print("Zeige alle statuse für share an...")
 	for i in pairs(self.db.share) do
-		self:Print("status von itemGroup ".. i .. ":")
 		self:PrintShareStatus({["arg"]=i})
 	end
 end

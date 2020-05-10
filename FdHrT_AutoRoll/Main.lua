@@ -90,15 +90,11 @@ local dbDefaults = {
 }
 
 function AutoRoll:OnInitialize()
-	--self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
-	--self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT_AutoRoll", "AutoRoll", "FdH Raid Tool")
-
     -- Called when the addon is loaded
 end
 
 function AutoRoll:OnEnable()
     -- Called when the addon is enabled
-    self:Print("geladen")
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
@@ -112,7 +108,6 @@ end
 function AutoRoll:GetRollIdData(rollId)
 	local itemInfo = {["rollId"] = rollId}
 	itemInfo.texture, itemInfo.name, itemInfo.count, itemInfo.quality, itemInfo.bindOnPickUp, itemInfo.canNeed, itemInfo.canGreed, itemInfo.canDisenchant, itemInfo.reasonNeed, itemInfo.reasonGreed, itemInfo.reasonDisenchant, itemInfo.deSkillRequired = GetLootRollItemInfo(rollId);
-	print(itemInfo.name..itemInfo.quality);
 	itemInfo.itemId, itemInfo.itemType, itemInfo.itemSubType, itemInfo.itemEquipLoc, itemInfo.icon, itemInfo.itemClassID, itemInfo.itemSubClassID = GetItemInfoInstant(GetLootRollItemLink(itemInfo.rollId));
 
 	itemInfo.itemLink = GetLootRollItemLink(itemInfo.rollId)
@@ -127,8 +122,6 @@ function AutoRoll:GetRollIdDataDebug(rollId)
 		count = 1,
 		quality = 3,
 		itemId = 19698,
-
-
 	}
 	return itemInfo
 end
@@ -138,14 +131,12 @@ end
 -- /run AutoRoll:troll(1,1234)
 -- Debug function to emulate a roll windows event
 function AutoRoll:troll(rollId, itemId)
-	self:Print("rollId ist: "..rollId)
 	local itemInfo = self:GetRollIdDataDebug(rollId);
 	if itemId then itemInfo.itemId = itemId end
 	self:CheckRoll(itemInfo)
 end
 
 function AutoRoll:START_LOOT_ROLL(event, rollId)
-	self:Print("Loot zum würfeln rollId"..rollId)
 	local itemInfo = self:GetRollIdData(rollId);
 	self:CheckRoll(itemInfo)
 end
@@ -166,25 +157,17 @@ function AutoRoll:CheckRoll(itemInfo)
 	-- end
 
 	-- no active itemGroup found for this roll window, abort
-	if currentItemGroupId == nil then self:Print("Gruppe nicht gefunden"); return false end
+	if currentItemGroupId == nil then return false end
 
 	local currentItemGroup = self.db.itemGroups[currentItemGroupId]
 
-	if currentItemGroup then
-		self:Print("gefundene Gruppe: "..currentItemGroup.description)
-	end
-
-
 	if currentItemGroup.share then
-
-		self:Print("checke round robin für rollId: "..itemInfo.rollId)
 		-- round robin mode. only roll when player not have more then the other from currentItemGroupId.
 		self:CheckShare(itemInfo.rollId, currentItemGroupId, currentItemGroup)
 	else
 		-- auto roll
-		self:Print("auto roll: ".. rollOptions[currentItemGroup.rollOptionSuccsess])
+		RollOnLoot(itemInfo.rollId, currentItemGroup.rollOptionSuccsess);
 	end
-
 end
 
 
@@ -235,8 +218,7 @@ function AutoRoll:CheckCondition(itemInfo, condition)
 		return instanceId == condition.args[1]
 	elseif condition.type == "quality" then 
 		-- Validate bevore use the evel loadstring function...
-		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then self:Print("Fataler error im AutoRoll, quality parameter ungültig") return false end
-		self:Print("loadstring: ".."return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2])
+		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then return false end
 		 
 		local f = assert(loadstring("return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2]))
 		return f()
@@ -284,7 +266,7 @@ function AutoRoll:CheckShare(rollId, currentItemGroupId)
 		sharedata.loot_counter = 0;
 		sharedata.has_loot = sharedata.has_loot -1;
 		sharedata.loot_round = sharedata.loot_round +1;
-		print("Neue Runde, has_loot -1 "..sharedata.has_loot);
+		print("Alle haben ein Item. Neue Runde :D");
 	end
 end
 
@@ -310,7 +292,6 @@ function AutoRoll:rollItemWon(rollId)
 		local sharedata = self.db.share[self.db.rolls[rollId]]
 		sharedata.has_loot = sharedata.has_loot +1;
 		sharedata.has_won_total = sharedata.has_won_total +1;
-		print("ich hab gewonnen has_loot +1 "..sharedata.has_loot);
 	end
 end
 
@@ -320,7 +301,6 @@ end
 
 function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 	local hid, rollId, players, done, _ = 1;
-	print("roll complete detect");
 
 	-- Any roll is done now. so loop over all the wow lootHistory data and check is ther a entry for a open rollid...
 	while true do
@@ -329,7 +309,7 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 			return
 		elseif done and self.db.rolls[rollId] then
 			-- found it...
-			print(rollId.." abgeschlossen ");
+			--print(rollId.." abgeschlossen ");
 			break
 		end
 		hid = hid+1
@@ -339,7 +319,7 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 	for j=1, players do
 		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
 		if is_winner then
-			print("gewinner von ".._.." ist: "..name.." class: "..class);
+--			print("gewinner von ".._.." ist: "..name.." class: "..class);
 			if is_me then
 				self:rollItemWon(rollId)
 			end
