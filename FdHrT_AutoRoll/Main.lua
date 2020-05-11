@@ -1,4 +1,4 @@
-AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
+local AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
 
 AutoRoll.sharedata = {} --
 -- @todo:  save this in AutoRoll, to not have dublications...
@@ -96,7 +96,8 @@ function AutoRoll:OnInitialize()
     self:RegisterChatCommand("rl", function() ReloadUI() end)
     self:loadDb()
     self:refreshOptions()
-    self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AutoRoll", "AutoRoll")
+    self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AutoRoll", "AutoRoll Master")
+    self:RegisterChatCommand("arm", "ChatCommand")
 end
 
 function AutoRoll:OnEnable()
@@ -115,6 +116,17 @@ function AutoRoll:loadDb()
 	self.profilOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
 end
 
+function AutoRoll:ChatCommand(input)
+	self:Print("start chatCommand")
+    if not input or input:trim() == "" then
+    	self:Print("show config gui")
+        InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
+        InterfaceOptionsFrame_OpenToCategory(self.optionsFrame)
+    else
+    	self:Print("run ace config")
+        LibStub("AceConfigCmd-3.0"):HandleCommand("arm", "AutoRoll", input)
+    end
+end
 
 function AutoRoll:GetRollIdData(rollId)
 	local itemInfo = {["rollId"] = rollId}

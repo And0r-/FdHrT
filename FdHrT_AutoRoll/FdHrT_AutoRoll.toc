@@ -4,8 +4,8 @@
 ## X-Embeds: Ace3
 
 
-## Title: FdH |cFF0099FF[AutoRoll]|r
-## Notes: Define rules to Automatic use Need, Gier, Pass on a item
+## Title: AutoRoll |cFF0099FFMaster|r
+## Notes: Define rules to Automatic roll or pass
 
 ## Notes-deDE: Definiere regeln um automatisch auf Items zu würfeln oder passen.
 
