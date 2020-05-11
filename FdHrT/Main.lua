@@ -28,7 +28,6 @@ function FdHrT:OnInitialize()
 	FdHrT:AddAddonDBDefaults();
     FdHrT:AddAddonOptions();
 	self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("FdHrT", "FdH Raid Tool")
-	self.optionsFrame2 = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AutoRoll", "AutoRoll", "FdH Raid Tool")
 	self:RegisterChatCommand("fdh", "ChatCommand")
     -- Called when the addon is loaded
 end

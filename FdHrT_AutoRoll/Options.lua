@@ -1,5 +1,4 @@
 AutoRoll = LibStub("AceAddon-3.0"):GetAddon("FdHrT_AutoRoll")
-local FdHrT = FdHrT
 
 -- 48	Blackfathom Deeps
 -- 230	Blackrock Depths
@@ -135,7 +134,7 @@ function AutoRoll:GetOptionItemGroups()
 		},
 	}
 
-	for itemGroupId,dbItemGroup in ipairs(self.db.itemGroups) do
+	for itemGroupId,dbItemGroup in ipairs(self.db.profile.itemGroups) do
 
 		itemGroups["itemGroup"..itemGroupId] = {
 			name = dbItemGroup.description,
@@ -237,10 +236,10 @@ function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
 		arg = itemGroupId,
 	}
 
-	if self.db.itemGroups[itemGroupId].conditions == nil then return conditions end
+	if self.db.profile.itemGroups[itemGroupId].conditions == nil then return conditions end
 
 	local order = 1;
-	for conditionId,condition in ipairs(self.db.itemGroups[itemGroupId].conditions) do
+	for conditionId,condition in ipairs(self.db.profile.itemGroups[itemGroupId].conditions) do
 		if condition.type ~= "deleted" then 
 
 			conditions["condition"..conditionId] = {
@@ -393,12 +392,18 @@ function AutoRoll:AddLuaConditonOptions(conditions,order,itemGroupId,conditionId
 	return conditions, order;
 end
 
+function AutoRoll:refreshOptions()
+	local options = self:GetOptions();
+	options.args.profiles = self.profilOptions
+    LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options)
+end
+
 function AutoRoll:GetConditionArg(info)
-	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]]
+	return self.db.profile.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]]
 end
 
 function AutoRoll:SetConditionArg(info, value)
-	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]] = value
+	self.db.profile.itemGroups[info.arg[1]].conditions[info.arg[2]].args[info.arg[3]] = value
 end
 
 function AutoRoll:IsDebug(info)
@@ -414,100 +419,90 @@ function AutoRoll:ToggleDebug(info)
 end
 
 function AutoRoll:AddConditionOption(info)
-	if self.db.itemGroups[info.arg].conditions == nil then self.db.itemGroups[info.arg].conditions = {} end
-	tinsert(self.db.itemGroups[info.arg].conditions, {type = "disabled", args = {true}});
+	if self.db.profile.itemGroups[info.arg].conditions == nil then self.db.profile.itemGroups[info.arg].conditions = {} end
+	tinsert(self.db.profile.itemGroups[info.arg].conditions, {type = "disabled", args = {true}});
 
-	options = self:GetOptions();
-    FdHrT:AddAddonOptions(options,"AutoRoll");
+	self:refreshOptions();
 end
 
 function AutoRoll:AddItemGroupOption(info)
-	tinsert(self.db.itemGroups, {description = "Neue Gruppe", conditions = {}, share = {}});
-
-	options = self:GetOptions();
-    FdHrT:AddAddonOptions(options,"AutoRoll");
+	tinsert(self.db.profile.itemGroups, {description = "Neue Gruppe", conditions = {}, share = {}});
+	self:refreshOptions();
 end
 
 
 function AutoRoll:GetConditionType(info)
-	return self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type
+	return self.db.profile.itemGroups[info.arg[1]].conditions[info.arg[2]].type
 end
 
 function AutoRoll:SetConditionType(info, value)
-	self.db.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
+	self.db.profile.itemGroups[info.arg[1]].conditions[info.arg[2]].type = value
 
-	-- I have to find a other way to delete options. at the moment i merge the table of changed sub addons with the global one.
-	FdHOptions.AutoRoll.args.itemGroups.args["itemGroup"..info.arg[1]].args.conditions = nil -- Remove the conditions from the global options
-	options = self:GetOptions();
-	FdHrT:AddAddonOptions(options,"AutoRoll");
+	self:refreshOptions();
 end
 
 function AutoRoll:GetItemGroupRollOptionSuccsess(info)
-	return self.db.itemGroups[info.arg].rollOptionSuccsess
+	return self.db.profile.itemGroups[info.arg].rollOptionSuccsess
 end
 
 function AutoRoll:SetItemGroupRollOptionSuccsess(info, value)
-	self.db.itemGroups[info.arg].rollOptionSuccsess = value
+	self.db.profile.itemGroups[info.arg].rollOptionSuccsess = value
 end
 
 function AutoRoll:getItemGroupDescription(info)
-	return self.db.itemGroups[info.arg].description
+	return self.db.profile.itemGroups[info.arg].description
 end
 
 function AutoRoll:setItemGroupDescription(info, value)
-	self.db.itemGroups[info.arg].description = value
-
-	options = self:GetOptions();
-	FdHrT:AddAddonOptions(options,"AutoRoll");
+	self.db.profile.itemGroups[info.arg].description = value
+	self:refreshOptions();
 end
 
 function AutoRoll:IsItemGroupEnabled(info)
-	return self.db.itemGroups[info.arg].enabled
+	return self.db.profile.itemGroups[info.arg].enabled
 end
 
 function AutoRoll:ToggleItemGroupEnabled(info, value)
-	self.db.itemGroups[info.arg].enabled = value
+	self.db.profile.itemGroups[info.arg].enabled = value
 end
 
 function AutoRoll:IsProfileItemGroupsEnabled(info)
-	return self.db.profileItemGroupsEnabled
+	return self.db.profile.profileItemGroupsEnabled
 end
 
 function AutoRoll:ToggleProfileItemGroupsEnabled(info, value)
-	self.db.profileItemGroupsEnabled = value
+	self.db.profile.profileItemGroupsEnabled = value
 end
 
 function AutoRoll:IsGuildItemGroupsEnabled(info)
-	return self.db.guildItemGroupsEnabled
+	return self.db.profile.guildItemGroupsEnabled
 end
 
 function AutoRoll:ToggleGuildItemGroupsEnabled(info, value)
-	self.db.guildItemGroupsEnabled = value
+	self.db.profile.guildItemGroupsEnabled = value
 end
 
 function AutoRoll:IssavedItemsEnabled(info)
-	return self.db.savedItemsEnabled
+	return self.db.profile.savedItemsEnabled
 end
 
 function AutoRoll:TogglesavedItemsEnabled(info, value)
-	self.db.savedItemsEnabled = value
+	self.db.profile.savedItemsEnabled = value
 end
 
 
 
 function AutoRoll:IsItemGroupShareEnabled(info)
-	if self.db.itemGroups[info.arg].share == nil then
+	if self.db.profile.itemGroups[info.arg].share == nil then
 		return false
 	else
-		return self.db.itemGroups[info.arg].share.enabled
+		return self.db.profile.itemGroups[info.arg].share.enabled
 	end
 end
 
 function AutoRoll:ToggleItemGroupShareEnabled(info, value)
-	self.db.itemGroups[info.arg].share.enabled = value
-	FdHOptions.AutoRoll.args.itemGroups.args["itemGroup"..info.arg] = nil -- Remove the conditions from the global options
-	options = self:GetOptions();
-	FdHrT:AddAddonOptions(options,"AutoRoll");
+	self.db.profile.itemGroups[info.arg].share.enabled = value
+	self:refreshOptions();
 end
 
  
@@ -515,18 +510,18 @@ end
 	if info.arg then
 		-- reset share loot from this itemGroupId
 		self:Print("Resette share von itemGroup: ".. info.arg)
-		self.db.share[info.arg] = {}
+		self.db.profile.share[info.arg] = {}
 	else
 		-- reset all share loots!
 		self:Print("Resette alle share daten")
-		self.db.share = {}
+		self.db.profile.share = {}
 	end
 end
 
 function AutoRoll:PrintShareStatus(info)
-	local sharedata = self.db.share[info.arg]
+	local sharedata = self.db.profile.share[info.arg]
 
-	self:Print(self.db.itemGroups[info.arg].description)
+	self:Print(self.db.profile.itemGroups[info.arg].description)
 	self:Print("Drops in dieser Runde: "..sharedata.loot_counter)
 	self:Print("Spieler in Gruppe: "..sharedata.party_member);
 	if sharedata.has_loot == 1 then
@@ -539,7 +534,7 @@ function AutoRoll:PrintShareStatus(info)
 end
 
 function AutoRoll:PrintAllShareStatus(info)
-	for i in pairs(self.db.share) do
+	for i in pairs(self.db.profile.share) do
 		self:PrintShareStatus({["arg"]=i})
 	end
 end

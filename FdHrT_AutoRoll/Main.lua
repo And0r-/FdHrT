@@ -1,5 +1,4 @@
 AutoRoll = LibStub("AceAddon-3.0"):NewAddon("FdHrT_AutoRoll", "AceConsole-3.0", "AceEvent-3.0")
-local FdHrT = FdHrT
 
 AutoRoll.sharedata = {} --
 -- @todo:  save this in AutoRoll, to not have dublications...
@@ -20,7 +19,7 @@ local GetPlayerInfo = C_LootHistory.GetPlayerInfo
 
 local dbDefaults = {
 	profile = {
-		AutoRoll = {
+	--	AutoRoll = {
 			rolls = {}, -- data about current rolls with share function, when this rollId is finished we have to check do we have won the item. and update the itemgroup share data. rolls[rollId] = itemGroupId
 			share = {}, -- round robin data of all groups. e.g: share[itemGroupId].loot_counter 
 			enabled = true, -- the addon self is enabled per default
@@ -87,13 +86,17 @@ local dbDefaults = {
 						-- perhaps i add a lua solution to, we will see
 					},
 				},
-			},
+			--},
 		},
 	},
 }
 
 function AutoRoll:OnInitialize()
     -- Called when the addon is loaded
+    self:RegisterChatCommand("rl", function() ReloadUI() end)
+    self:loadDb()
+    self:refreshOptions()
+    self.optionsFrame = LibStub("AceConfigDialog-3.0"):AddToBlizOptions("AutoRoll", "AutoRoll")
 end
 
 function AutoRoll:OnEnable()
@@ -101,11 +104,17 @@ function AutoRoll:OnEnable()
     self:RegisterEvent("START_LOOT_ROLL")
     self:RegisterEvent("LOOT_HISTORY_ROLL_COMPLETE")
     -- Register AutoRoll db on Core addon, and set only the scope to this addon db. So profile reset works fine for all the addons.
-    self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
-    local options = self:GetOptions();
-    FdHrT:AddAddonOptions(options,"AutoRoll");
+    --self.db = FdHrT:AddAddonDBDefaults(dbDefaults).profile.AutoRoll;
+
+    
     --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
 end
+
+function AutoRoll:loadDb()
+	self.db = LibStub("AceDB-3.0"):New("AutoRollDB", dbDefaults, true)
+	self.profilOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db)
+end
+
 
 function AutoRoll:GetRollIdData(rollId)
 	local itemInfo = {["rollId"] = rollId}
@@ -153,24 +162,24 @@ function AutoRoll:START_LOOT_ROLL(event, rollId)
 end
 
 function AutoRoll:CheckRoll(itemInfo)
-	if self.db.enabled == false then return false end
+	if self.db.profile.enabled == false then return false end
 	local currentItemGroupId
 
 	-- if raiditem then
 	-- 	if raidItemGroupsEnabled and self:isRaidItemGroup then
-	-- 		currentItemGroupId = self:findGroup(itemInfo,self.db.itemGroupsRaid);
-	-- 		if currentItemGroupId then currentItemGroup = self.db.itemGroupsRaid[currentItemGroupId] end
+	-- 		currentItemGroupId = self:findGroup(itemInfo,self.db.profile.itemGroupsRaid);
+	-- 		if currentItemGroupId then currentItemGroup = self.db.profile.itemGroupsRaid[currentItemGroupId] end
 	-- 	end
 	-- else
-		if self.db.profileItemGroupsEnabled then
-			currentItemGroupId = self:findGroup(itemInfo,self.db.itemGroups);
+		if self.db.profile.profileItemGroupsEnabled then
+			currentItemGroupId = self:findGroup(itemInfo,self.db.profile.itemGroups);
 		end
 	-- end
 
 	-- no active itemGroup found for this roll window, abort
 	if currentItemGroupId == nil then return false end
 
-	local currentItemGroup = self.db.itemGroups[currentItemGroupId]
+	local currentItemGroup = self.db.profile.itemGroups[currentItemGroupId]
 
 	if currentItemGroup.share then
 		-- round robin mode. only roll when player not have more then the other from currentItemGroupId.
@@ -257,9 +266,9 @@ end
 
 -- a little bit messy at the moment, 
 function AutoRoll:CheckShare(rollId, currentItemGroupId)
-	self.db.rolls[rollId] = currentItemGroupId;
-	if self.db.share[currentItemGroupId] == nil then self:initShare(currentItemGroupId) end
- 	local sharedata = self.db.share[currentItemGroupId];
+	self.db.profile.rolls[rollId] = currentItemGroupId;
+	if self.db.profile.share[currentItemGroupId] == nil then self:initShare(currentItemGroupId) end
+ 	local sharedata = self.db.profile.share[currentItemGroupId];
 
 	sharedata.loot_counter = sharedata.loot_counter +1;
 	sharedata.party_member = GetNumGroupMembers(); -- it is possible that one of the group do not want any zg coins. so we need a option later to change the party_member size by hand...
@@ -282,7 +291,7 @@ function AutoRoll:CheckShare(rollId, currentItemGroupId)
 end
 
 function AutoRoll:initShare(currentItemGroupId)
-	self.db.share[currentItemGroupId] = {
+	self.db.profile.share[currentItemGroupId] = {
 		loot_counter = 0,
 		has_loot = 0,
 		loot_round = 1,
@@ -299,8 +308,8 @@ end
 
 -- /run AutoRoll:rollItemWon(1)
 function AutoRoll:rollItemWon(rollId)
-	if self.db.rolls[rollId] then
-		local sharedata = self.db.share[self.db.rolls[rollId]]
+	if self.db.profile.rolls[rollId] then
+		local sharedata = self.db.profile.share[self.db.profile.rolls[rollId]]
 		sharedata.has_loot = sharedata.has_loot +1;
 		sharedata.has_won_total = sharedata.has_won_total +1;
 	end
@@ -318,7 +327,7 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 		rollId, _, players, done = C_LootHistory.GetItem(hid);
 		if not rollId then
 			return
-		elseif done and self.db.rolls[rollId] then
+		elseif done and self.db.profile.rolls[rollId] then
 			-- found it...
 			--print(rollId.." abgeschlossen ");
 			break
@@ -339,7 +348,7 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 		end
 	end
 
-	self.db.rolls[rollId] = nil -- ignore this rollId in the history data next time
+	self.db.profile.rolls[rollId] = nil -- ignore this rollId in the history data next time
 end
 
 
