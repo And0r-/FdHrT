@@ -3,9 +3,11 @@ local FdHrT = FdHrT
 
 AutoRoll.sharedata = {} --
 -- @todo:  save this in AutoRoll, to not have dublications...
-local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
-local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
-local conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
+AutoRoll.rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
+AutoRoll.itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
+AutoRoll.conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
+AutoRoll.dungeonList = {[309]="Zul'Gurub",[249]="Ony", [409]="MC", [469]="BWL", [389]="test instance"}
+AutoRoll.conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
 
 
 --wow api, tis will do a lot other addons, i'm not sure is it local a lot faster?
@@ -28,7 +30,8 @@ local dbDefaults = {
 
 			savedItems = { -- it will be possible to remember the decision on the roll frame. this is stored here
 				--[19698] = 0,
-			}, 
+			},
+			raidSize = nil, -- When i get a itemGroupsRaid ruleset for a raid store here the group size. when the group size will be smaler then 40% or less then 2 i know the raid is finish and the itemGroupsRaid will be deleted. 
 			itemGroupsRaid = {}, -- here are the groups stored you recive from raid lead
 			itemGroups = { -- When not stored in the savedItems it will check the items groups
 				{
@@ -226,7 +229,7 @@ function AutoRoll:CheckCondition(itemInfo, condition)
 		return instanceId == condition.args[1]
 	elseif condition.type == "quality" then 
 		-- Validate bevore use the evel loadstring function...
-		if conditionOperaters[condition.args[1]] == nil or itemQuality[condition.args[2]] == nil then return false end
+		if self.conditionOperaters[condition.args[1]] == nil or self.itemQuality[condition.args[2]] == nil then return false end
 		 
 		local f = assert(loadstring("return "..itemInfo.quality.." "..condition.args[1].." "..condition.args[2]))
 		return f()

@@ -1,14 +1,6 @@
 AutoRoll = LibStub("AceAddon-3.0"):GetAddon("FdHrT_AutoRoll")
 local FdHrT = FdHrT
 
-
-
-local conditionList = {["quality"]="Qualität", ["dungeon"]="Dungeon", ["party_member"]="In der Gruppe mit", ["lua"]="Lua",["disabled"]="Deaktiviert",["deleted"]="Löschen",["item"]="Item"}
-local rollOptions = {[0]="Passen", [1]="Bedarf", [2]="Gier"}
-local itemQuality = {[2]="Außergewöhnlich", [3]="Selten", [4]="Episch", [5]="Legendär", [6]="Artifakt"}
-local dungeonList = {[309]="Zul'Gurub",[249]="Ony", [409]="MC", [469]="BWL", [389]="test instance"}
-
-
 -- 48	Blackfathom Deeps
 -- 230	Blackrock Depths
 -- 229	Blackrock Spire
@@ -36,8 +28,6 @@ local dungeonList = {[309]="Zul'Gurub",[249]="Ony", [409]="MC", [469]="BWL", [38
 -- 509	Ruins of Ahn'Qiraj
 -- 531	Temple of Ahn'Qira
 
-
-local conditionOperaters = {["=="]="ist gleich",[">="]="ist mindestens",["<="]="ist höchstens",[">"]="ist höher als",["<"]="ist kleiner als"}
 
 function AutoRoll:GetOptions()
 	return { 
@@ -196,7 +186,7 @@ function AutoRoll:GetOptionItemGroups()
       				desc = "Gibt an was mit den Items geschehen soll, welche alle Regeln erfüllen.",
       				type = "select",
       				order = 6,
-      				values = rollOptions,
+      				values = self.rollOptions,
       				get = "GetItemGroupRollOptionSuccsess",
       				set = "SetItemGroupRollOptionSuccsess",
       				style = "dropdown",
@@ -258,7 +248,7 @@ function AutoRoll:GetOptionItemGroupConditions(itemGroupId)
 	  				desc = "",
 	  				type = "select",
 	  				order = order,
-	  				values = conditionList,
+	  				values = self.conditionList,
 	  				get = "GetConditionType",
 	  				set = "SetConditionType",
 	  				style = "dropdown",
@@ -316,7 +306,7 @@ function AutoRoll:AddQualityConditonOptions(conditions,order,itemGroupId,conditi
 		get = "GetConditionArg",
 		set = "SetConditionArg",
 		style = "dropdown",
-		values = conditionOperaters,
+		values = self.conditionOperaters,
 		arg = {itemGroupId,conditionId,1},
 	}
 	order = order +1
@@ -329,7 +319,7 @@ function AutoRoll:AddQualityConditonOptions(conditions,order,itemGroupId,conditi
 		get = "GetConditionArg",
 		set = "SetConditionArg",
 		style = "dropdown",
-		values = itemQuality,
+		values = self.itemQuality,
 		arg = {itemGroupId,conditionId,2},
 	}
 	order = order +1
@@ -348,7 +338,7 @@ function AutoRoll:AddDungeonConditonOptions(conditions,order,itemGroupId,conditi
 		get = "GetConditionArg",
 		set = "SetConditionArg",
 		style = "dropdown",
-		values = dungeonList,
+		values = self.dungeonList,
 		arg = {itemGroupId,conditionId,1},
 	}
 	order = order +1
