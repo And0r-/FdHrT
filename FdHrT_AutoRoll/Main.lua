@@ -102,7 +102,6 @@ function AutoRoll:OnEnable()
     local options = self:GetOptions();
     FdHrT:AddAddonOptions(options,"AutoRoll");
     --LibStub("AceConfig-3.0"):RegisterOptionsTable("AutoRoll", options.args.ar, {"ar"})
-
 end
 
 function AutoRoll:GetRollIdData(rollId)
@@ -115,6 +114,7 @@ function AutoRoll:GetRollIdData(rollId)
 	return itemInfo
 end
 
+-- Fake roll data used when you use the AutoRoll:troll function for a test roll
 function AutoRoll:GetRollIdDataDebug(rollId)
 	local itemInfo = {
 		rollId = rollId,
@@ -126,9 +126,17 @@ function AutoRoll:GetRollIdDataDebug(rollId)
 	return itemInfo
 end
 
+-- Only for addon develop:
+
+-- start a new roll for a ZG coin and rollId 1
 -- /run AutoRoll:troll(1)
+
+-- fake a win of the item from rollId 1
 -- /run AutoRoll:rollItemWon(1)
+
+-- start a new roll for item id 1234
 -- /run AutoRoll:troll(1,1234)
+
 -- Debug function to emulate a roll windows event
 function AutoRoll:troll(rollId, itemId)
 	local itemInfo = self:GetRollIdDataDebug(rollId);
@@ -170,7 +178,7 @@ function AutoRoll:CheckRoll(itemInfo)
 	end
 end
 
-
+-- Raid lead can shere a itemGroup to all raid members with this addon. this temporary itemGroup should work until the end of the dungeon.
 -- function AutoRoll:isRaidItemGroup()
 -- 	-- There are no dungeon session id, so i have to track self is it the same group
 -- end
@@ -319,7 +327,8 @@ function AutoRoll:LOOT_HISTORY_ROLL_COMPLETE()
 	for j=1, players do
 		local name, class, rtype, roll, is_winner, is_me = GetPlayerInfo(hid, j)
 		if is_winner then
---			print("gewinner von ".._.." ist: "..name.." class: "..class);
+			-- print("gewinner von ".._.." ist: "..name.." class: "..class);
+			-- perhaps i will add here a loot history feature, but not at the moment.
 			if is_me then
 				self:rollItemWon(rollId)
 			end
